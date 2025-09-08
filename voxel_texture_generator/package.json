@@ -1,7 +1,7 @@
 {
   "name": "voxel-texture-generator",
   "version": "1.0.0",
-  "description": "Web3 Tycoon Texture Generator using Nano Banana API",
+  "description": "Web3 Tycoon Texture Generator using Google Nano Banana (Gemini 2.5 Flash Image)",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -13,13 +13,17 @@
     "test-text-blocks": "ts-node src/index.ts --blocks=empty_tile,chance,bonus,crypto_wallet,defi_bank --style=text",
     "prompt-basic": "ts-node src/index.ts --prompt-only --style=basic",
     "prompt-text": "ts-node src/index.ts --prompt-only --style=text",
-    "prompt-key-blocks": "ts-node src/index.ts --prompt-only --blocks=empty_tile,chance,bonus,crypto_wallet,defi_bank --style=basic"
+    "prompt-key-blocks": "ts-node src/index.ts --prompt-only --blocks=empty_tile,chance,bonus,crypto_wallet,defi_bank --style=basic",
+    "prompt-backgrounds": "ts-node src/index.ts --prompt-only --blocks=background_ghibli,background_sui_web3,background_minecraft_ancient,background_steampunk,background_cyberpunk --style=basic",
+    "generate-backgrounds": "ts-node src/index.ts --blocks=background_ghibli,background_sui_web3,background_minecraft_ancient,background_steampunk,background_cyberpunk --style=basic",
+    "test-background": "ts-node src/index.ts --blocks=background_ghibli --style=basic"
   },
   "dependencies": {
     "axios": "^1.6.0",
     "sharp": "^0.32.0",
     "fs-extra": "^11.0.0",
-    "yargs": "^17.7.0"
+    "yargs": "^17.7.0",
+    "@google/genai": "^1.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

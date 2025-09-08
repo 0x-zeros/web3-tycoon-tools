@@ -1,6 +1,6 @@
 export interface BlockConfig {
   name: string;
-  category: 'basic' | 'special' | 'building' | 'npc' | 'obstacle' | 'web3';
+  category: 'basic' | 'special' | 'building' | 'npc' | 'obstacle' | 'web3' | 'background';
   description: string;
   keyword: string; // 嵌入文字的关键词
   basePrompt: string;
@@ -19,6 +19,7 @@ export interface GenerationOptions {
 export interface NanoBananaResponse {
   success: boolean;
   imageUrl?: string;
+  base64Data?: string;
   error?: string;
 }
 

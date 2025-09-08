@@ -59,7 +59,7 @@ const argv = yargs(hideBin(process.argv))
   })
   .option('api-key', {
     type: 'string',
-    description: 'NanoBanana API key (can also be set via NANOBANA_API_KEY env var)'
+    description: 'Gemini API key (can also be set via GEMINI_API_KEY env var)'
   })
   .help('h')
   .alias('h', 'help')
@@ -77,10 +77,11 @@ async function main() {
     console.log('================================\n');
 
     // 检查环境变量或命令行API key
-    const apiKey = argv['api-key'] || process.env.NANOBANA_API_KEY;
+    const apiKey = argv['api-key'] || process.env.GEMINI_API_KEY;
     if (!apiKey && !argv.list && !argv['prompt-only']) {
-      console.error('❌ Error: NanoBanana API key is required!');
-      console.error('Set NANOBANA_API_KEY environment variable or use --api-key option');
+      console.error('❌ Error: Gemini API key is required!');
+      console.error('Set GEMINI_API_KEY environment variable or use --api-key option');
+      console.error('💡 Get your API key from: https://aistudio.google.com/app/apikey');
       process.exit(1);
     }
 

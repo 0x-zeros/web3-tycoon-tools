@@ -261,5 +261,57 @@ export const BLOCKS: BlockConfig[] = [
     textPrompt: 'Pixelated portal frame texture with "META" text, mystical purple-green background, glowing white text "META" clearly visible, portal symbols, metaverse gateway theme, dimensional energy, voxel style',
     colors: ['#8A2BE2', '#9400D3', '#00FF7F'],
     size: 64
+  },
+
+  // === 等距视角背景地图 ===
+  {
+    name: 'background_ghibli',
+    category: 'background',
+    description: '吉卜力风格背景地图',
+    keyword: 'GHIBLI',
+    basePrompt: 'Isometric view monopoly game board background, Studio Ghibli style, 45-degree top-down perspective, lush green rolling hills, whimsical trees, floating islands, soft pastel colors, magical atmosphere, seamless tileable pattern, dreamy clouds, fairy tale landscape, hand-painted anime aesthetic, peaceful nature scene',
+    textPrompt: 'Isometric view monopoly board background with "GHIBLI" text, Studio Ghibli style, 45-degree perspective, magical rolling hills, whimsical trees, soft pastel colors, "GHIBLI" text subtly integrated into landscape, seamless tiling, fairy tale atmosphere',
+    colors: ['#7CB342', '#8BC34A', '#CDDC39', '#87CEEB'],
+    size: 1024
+  },
+  {
+    name: 'background_sui_web3',
+    category: 'background',
+    description: 'Web3 Sui风格背景地图',
+    keyword: 'SUI',
+    basePrompt: 'Isometric view monopoly game board background, Web3 Sui blockchain theme, 45-degree top-down perspective, futuristic grid patterns, holographic hexagonal tiles, cyan and blue energy flows, digital nodes and connections, crystalline structures, seamless tileable pattern, high-tech aesthetic, blockchain visualization, geometric precision',
+    textPrompt: 'Isometric view monopoly board background with "SUI" text, Web3 blockchain theme, 45-degree perspective, futuristic cyan grid, holographic hexagonal patterns, digital energy flows, "SUI" text glowing in center, seamless tiling, high-tech aesthetic',
+    colors: ['#00BCD4', '#0097A7', '#006064', '#1DE9B6'],
+    size: 1024
+  },
+  {
+    name: 'background_minecraft_ancient',
+    category: 'background', 
+    description: 'Minecraft古代荒野风格背景地图',
+    keyword: 'RUINS',
+    basePrompt: 'Isometric view monopoly game board background, Minecraft ancient wilderness style, 45-degree top-down perspective, weathered stone ruins, overgrown vegetation, cracked earth, ancient pathways, moss-covered blocks, desert oasis patches, seamless tileable pattern, archaeological site aesthetic, abandoned civilization, earthy color palette',
+    textPrompt: 'Isometric view monopoly board background with "RUINS" text, Minecraft ancient wilderness style, 45-degree perspective, weathered stone ruins, overgrown vegetation, cracked earth, "RUINS" text carved into ancient stone, seamless tiling, archaeological aesthetic',
+    colors: ['#8D6E63', '#6D4C41', '#5D4037', '#4CAF50'],
+    size: 1024
+  },
+  {
+    name: 'background_steampunk',
+    category: 'background',
+    description: '蒸汽朋克风格背景地图',
+    keyword: 'STEAM',
+    basePrompt: 'Isometric view monopoly game board background, Steampunk style, 45-degree top-down perspective, brass mechanical gears, copper pipes, steam vents, Victorian industrial aesthetic, clockwork mechanisms, bronze and copper color scheme, seamless tileable pattern, retro-futuristic machinery, ornate metal work, steam-powered technology',
+    textPrompt: 'Isometric view monopoly board background with "STEAM" text, Steampunk style, 45-degree perspective, brass mechanical gears, copper pipes, steam vents, "STEAM" text embossed on brass plate, seamless tiling, Victorian industrial aesthetic',
+    colors: ['#B8860B', '#CD853F', '#D2691E', '#8B4513'],
+    size: 1024
+  },
+  {
+    name: 'background_cyberpunk',
+    category: 'background',
+    description: '赛博朋克风格背景地图',
+    keyword: 'CYBER',
+    basePrompt: 'Isometric view monopoly game board background, Cyberpunk style, 45-degree top-down perspective, neon-lit urban grid, holographic advertisements, electric circuit patterns, dark cityscape with glowing accents, neon pink and cyan lighting, seamless tileable pattern, futuristic dystopian aesthetic, digital rain effects, high-tech urban decay',
+    textPrompt: 'Isometric view monopoly board background with "CYBER" text, Cyberpunk style, 45-degree perspective, neon-lit urban grid, holographic patterns, electric circuits, "CYBER" text in glowing neon letters, seamless tiling, futuristic dystopian aesthetic',
+    colors: ['#E91E63', '#9C27B0', '#00BCD4', '#FF5722'],
+    size: 1024
   }
 ];
