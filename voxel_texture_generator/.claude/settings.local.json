@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/zero/dev/sui/web3-tycoon-tools/**)",
+      "Bash(npm install:*)",
+      "Bash(npm run list-actors:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

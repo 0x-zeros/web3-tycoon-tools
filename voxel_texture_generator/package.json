@@ -16,23 +16,43 @@
     "prompt-key-blocks": "ts-node src/index.ts --prompt-only --blocks=empty_tile,chance,bonus,crypto_wallet,defi_bank --style=basic",
     "prompt-backgrounds": "ts-node src/index.ts --prompt-only --blocks=background_ghibli,background_sui_web3,background_minecraft_ancient,background_steampunk,background_cyberpunk --style=basic",
     "generate-backgrounds": "ts-node src/index.ts --blocks=background_ghibli,background_sui_web3,background_minecraft_ancient,background_steampunk,background_cyberpunk --style=basic",
-    "test-background": "ts-node src/index.ts --blocks=background_ghibli --style=basic"
+    "test-background": "ts-node src/index.ts --blocks=background_ghibli --style=basic",
+    "generate-actors": "ts-node src/generateActors.ts",
+    "generate-actors-all": "ts-node src/generateActors.ts --category=all",
+    "generate-npcs": "ts-node src/generateActors.ts --category=npc",
+    "generate-npcs-with-animations": "ts-node src/generateActors.ts --category=npc --animations",
+    "generate-buildings": "ts-node src/generateActors.ts --category=building",
+    "generate-objects": "ts-node src/generateActors.ts --category=object",
+    "generate-actors-specific": "ts-node src/generateActors.ts",
+    "list-actors": "ts-node src/generateActors.ts --list",
+    "test-actor-npc": "ts-node src/generateActors.ts --actors=land_god --animations",
+    "test-actor-building": "ts-node src/generateActors.ts --actors=property_small_lv1,temple_lv1",
+    "test-actor-object": "ts-node src/generateActors.ts --actors=roadblock,bomb"
   },
   "dependencies": {
+    "@google/genai": "^1.17.0",
+    "@types/dotenv": "^6.1.1",
     "axios": "^1.6.0",
-    "sharp": "^0.32.0",
+    "dotenv": "^17.2.2",
     "fs-extra": "^11.0.0",
-    "yargs": "^17.7.0",
-    "@google/genai": "^1.17.0"
+    "sharp": "^0.32.0",
+    "yargs": "^17.7.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/fs-extra": "^11.0.0",
+    "@types/node": "^20.0.0",
     "@types/yargs": "^17.0.0",
-    "typescript": "^5.3.0",
-    "ts-node": "^10.9.0"
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
   },
-  "keywords": ["voxel", "texture", "ai", "nano-banana", "minecraft", "web3"],
+  "keywords": [
+    "voxel",
+    "texture",
+    "ai",
+    "nano-banana",
+    "minecraft",
+    "web3"
+  ],
   "author": "Web3 Tycoon Team",
   "license": "MIT"
 }
