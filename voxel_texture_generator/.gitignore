@@ -39,3 +39,5 @@ Thumbs.db
 # Temporary files
 temp/
 tmp/
+
+input_data/

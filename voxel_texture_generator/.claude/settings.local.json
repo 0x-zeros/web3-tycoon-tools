@@ -12,7 +12,13 @@
       "WebFetch(domain:ai.google.dev)",
       "Bash(npm run list-actors-local:*)",
       "Bash(npm run generate-actors-local-test:*)",
-      "Bash(npm run generate-actors-all-local:*)"
+      "Bash(npm run generate-actors-all-local:*)",
+      "Bash(for:*)",
+      "Bash(do identify:*)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(node:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []

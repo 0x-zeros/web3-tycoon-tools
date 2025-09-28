@@ -34,7 +34,10 @@
     "generate-actors-local-building": "ts-node src/generateActorsLocal.ts --category=building",
     "generate-actors-local-object": "ts-node src/generateActorsLocal.ts --category=object",
     "generate-actors-local-test": "ts-node src/generateActorsLocal.ts --actors=temple_lv1,land_god,roadblock",
-    "list-actors-local": "ts-node src/generateActorsLocal.ts --list"
+    "list-actors-local": "ts-node src/generateActorsLocal.ts --list",
+    "process-actors": "ts-node src/processActorImages.ts",
+    "process-actors-256": "ts-node src/processActorImages.ts --size=256",
+    "process-actors-overwrite": "ts-node src/processActorImages.ts --overwrite --backup"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
