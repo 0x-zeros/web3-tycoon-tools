@@ -41,6 +41,10 @@ export class ActorTextureGenerator {
     this.nanobana = new NanoBananaGenerator(apiKey);
     this.imageProcessor = new ImageProcessor();
     this.outputDir = path.resolve(outputDir);
+
+    if (!apiKey && !process.env.GEMINI_API_KEY) {
+      console.warn('⚠️ No API key provided. Please set GEMINI_API_KEY environment variable.');
+    }
   }
 
   /**
@@ -62,7 +66,7 @@ export class ActorTextureGenerator {
     // 测试API连接
     const isConnected = await this.nanobana.testConnection();
     if (!isConnected) {
-      throw new Error('❌ Cannot connect to API. Please check your API key.');
+      throw new Error('❌ Cannot connect to Nano Banana API. Please check your API key.');
     }
 
     // 创建输出目录结构
@@ -194,7 +198,7 @@ export class ActorTextureGenerator {
     console.log(`\n🎨 Generating: ${config.name} - ${config.description}`);
 
     try {
-      // 调用API生成图像
+      // 调用Nano Banana API生成图像
       const generationResult = await this.nanobana.generateTexture(
         config.prompt,
         config.size || outputSize

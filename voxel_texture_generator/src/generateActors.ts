@@ -65,6 +65,7 @@ async function main() {
     console.error('❌ Error: GEMINI_API_KEY environment variable not set');
     console.error('Please add your API key to .env file:');
     console.error('GEMINI_API_KEY=your_api_key_here');
+    console.error('Get your key from: https://aistudio.google.com/app/apikey');
     process.exit(1);
   }
 

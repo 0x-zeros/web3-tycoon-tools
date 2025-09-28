@@ -3,7 +3,13 @@
     "allow": [
       "Read(//Users/zero/dev/sui/web3-tycoon-tools/**)",
       "Bash(npm install:*)",
-      "Bash(npm run list-actors:*)"
+      "Bash(npm run list-actors:*)",
+      "Bash(npm run test-actor-object:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(GEMINI_API_KEY=\"\" npm run test-actor-object)",
+      "Bash(unset:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ai.google.dev)"
     ],
     "deny": [],
     "ask": []
