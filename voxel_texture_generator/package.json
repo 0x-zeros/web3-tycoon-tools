@@ -28,7 +28,13 @@
     "test-actor-npc": "ts-node src/generateActors.ts --actors=land_god --animations",
     "test-actor-building": "ts-node src/generateActors.ts --actors=property_small_lv1,temple_lv1",
     "test-actor-object": "ts-node src/generateActors.ts --actors=roadblock,bomb",
-    "test-actor-local": "GEMINI_API_KEY='' ts-node src/generateActors.ts --actors=roadblock,bomb"
+    "test-actor-local": "GEMINI_API_KEY='' ts-node src/generateActors.ts --actors=roadblock,bomb",
+    "generate-actors-all-local": "ts-node src/generateActorsLocal.ts --category=all",
+    "generate-actors-local-npc": "ts-node src/generateActorsLocal.ts --category=npc",
+    "generate-actors-local-building": "ts-node src/generateActorsLocal.ts --category=building",
+    "generate-actors-local-object": "ts-node src/generateActorsLocal.ts --category=object",
+    "generate-actors-local-test": "ts-node src/generateActorsLocal.ts --actors=temple_lv1,land_god,roadblock",
+    "list-actors-local": "ts-node src/generateActorsLocal.ts --list"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",

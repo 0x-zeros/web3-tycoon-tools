@@ -9,7 +9,10 @@
       "Bash(GEMINI_API_KEY=\"\" npm run test-actor-object)",
       "Bash(unset:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npm run list-actors-local:*)",
+      "Bash(npm run generate-actors-local-test:*)",
+      "Bash(npm run generate-actors-all-local:*)"
     ],
     "deny": [],
     "ask": []

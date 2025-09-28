@@ -1,0 +1,276 @@
+{
+  "timestamp": "2025-09-28T01:18:17.613Z",
+  "summary": {
+    "total": 38,
+    "successful": 38,
+    "failed": 0
+  },
+  "textures": [
+    {
+      "name": "land_god",
+      "category": "npc",
+      "displayText": "土地神",
+      "color": "红色",
+      "path": "npc/land_god.png"
+    },
+    {
+      "name": "wealth_god",
+      "category": "npc",
+      "displayText": "财神",
+      "color": "红色",
+      "path": "npc/wealth_god.png"
+    },
+    {
+      "name": "fortune_god",
+      "category": "npc",
+      "displayText": "福神",
+      "color": "红色",
+      "path": "npc/fortune_god.png"
+    },
+    {
+      "name": "dog",
+      "category": "npc",
+      "displayText": "可爱的小狗",
+      "color": "红色",
+      "path": "npc/dog.png"
+    },
+    {
+      "name": "poverty_god",
+      "category": "npc",
+      "displayText": "穷神",
+      "color": "红色",
+      "path": "npc/poverty_god.png"
+    },
+    {
+      "name": "roadblock",
+      "category": "object",
+      "displayText": "路障",
+      "color": "青色",
+      "path": "object/roadblock.png"
+    },
+    {
+      "name": "bomb",
+      "category": "object",
+      "displayText": "炸弹",
+      "color": "青色",
+      "path": "object/bomb.png"
+    },
+    {
+      "name": "lv0",
+      "category": "building",
+      "displayText": "空地",
+      "color": "灰色",
+      "path": "building/lv0.png"
+    },
+    {
+      "name": "property_small_lv1",
+      "category": "building",
+      "displayText": "小型地产 1级",
+      "color": "绿色",
+      "path": "building/property_small_lv1.png"
+    },
+    {
+      "name": "property_small_lv2",
+      "category": "building",
+      "displayText": "小型地产 2级",
+      "color": "蓝色",
+      "path": "building/property_small_lv2.png"
+    },
+    {
+      "name": "property_small_lv3",
+      "category": "building",
+      "displayText": "小型地产 3级",
+      "color": "紫色",
+      "path": "building/property_small_lv3.png"
+    },
+    {
+      "name": "property_small_lv4",
+      "category": "building",
+      "displayText": "小型地产 4级",
+      "color": "橙色",
+      "path": "building/property_small_lv4.png"
+    },
+    {
+      "name": "property_small_lv5",
+      "category": "building",
+      "displayText": "小型地产 5级",
+      "color": "金色",
+      "path": "building/property_small_lv5.png"
+    },
+    {
+      "name": "temple_lv1",
+      "category": "building",
+      "displayText": "土地庙 1级",
+      "color": "绿色",
+      "path": "building/temple_lv1.png"
+    },
+    {
+      "name": "temple_lv2",
+      "category": "building",
+      "displayText": "土地庙 2级",
+      "color": "蓝色",
+      "path": "building/temple_lv2.png"
+    },
+    {
+      "name": "temple_lv3",
+      "category": "building",
+      "displayText": "土地庙 3级",
+      "color": "紫色",
+      "path": "building/temple_lv3.png"
+    },
+    {
+      "name": "temple_lv4",
+      "category": "building",
+      "displayText": "土地庙 4级",
+      "color": "橙色",
+      "path": "building/temple_lv4.png"
+    },
+    {
+      "name": "temple_lv5",
+      "category": "building",
+      "displayText": "土地庙 5级",
+      "color": "金色",
+      "path": "building/temple_lv5.png"
+    },
+    {
+      "name": "research_lv1",
+      "category": "building",
+      "displayText": "研究所 1级",
+      "color": "绿色",
+      "path": "building/research_lv1.png"
+    },
+    {
+      "name": "research_lv2",
+      "category": "building",
+      "displayText": "研究所 2级",
+      "color": "蓝色",
+      "path": "building/research_lv2.png"
+    },
+    {
+      "name": "research_lv3",
+      "category": "building",
+      "displayText": "研究所 3级",
+      "color": "紫色",
+      "path": "building/research_lv3.png"
+    },
+    {
+      "name": "research_lv4",
+      "category": "building",
+      "displayText": "研究所 4级",
+      "color": "橙色",
+      "path": "building/research_lv4.png"
+    },
+    {
+      "name": "research_lv5",
+      "category": "building",
+      "displayText": "研究所 5级",
+      "color": "金色",
+      "path": "building/research_lv5.png"
+    },
+    {
+      "name": "oil_company_lv1",
+      "category": "building",
+      "displayText": "石油公司 1级",
+      "color": "绿色",
+      "path": "building/oil_company_lv1.png"
+    },
+    {
+      "name": "oil_company_lv2",
+      "category": "building",
+      "displayText": "石油公司 2级",
+      "color": "蓝色",
+      "path": "building/oil_company_lv2.png"
+    },
+    {
+      "name": "oil_company_lv3",
+      "category": "building",
+      "displayText": "石油公司 3级",
+      "color": "紫色",
+      "path": "building/oil_company_lv3.png"
+    },
+    {
+      "name": "oil_company_lv4",
+      "category": "building",
+      "displayText": "石油公司 4级",
+      "color": "橙色",
+      "path": "building/oil_company_lv4.png"
+    },
+    {
+      "name": "oil_company_lv5",
+      "category": "building",
+      "displayText": "石油公司 5级",
+      "color": "金色",
+      "path": "building/oil_company_lv5.png"
+    },
+    {
+      "name": "commercial_lv1",
+      "category": "building",
+      "displayText": "商业中心 1级",
+      "color": "绿色",
+      "path": "building/commercial_lv1.png"
+    },
+    {
+      "name": "commercial_lv2",
+      "category": "building",
+      "displayText": "商业中心 2级",
+      "color": "蓝色",
+      "path": "building/commercial_lv2.png"
+    },
+    {
+      "name": "commercial_lv3",
+      "category": "building",
+      "displayText": "商业中心 3级",
+      "color": "紫色",
+      "path": "building/commercial_lv3.png"
+    },
+    {
+      "name": "commercial_lv4",
+      "category": "building",
+      "displayText": "商业中心 4级",
+      "color": "橙色",
+      "path": "building/commercial_lv4.png"
+    },
+    {
+      "name": "commercial_lv5",
+      "category": "building",
+      "displayText": "商业中心 5级",
+      "color": "金色",
+      "path": "building/commercial_lv5.png"
+    },
+    {
+      "name": "hotel_lv1",
+      "category": "building",
+      "displayText": "大饭店 1级",
+      "color": "绿色",
+      "path": "building/hotel_lv1.png"
+    },
+    {
+      "name": "hotel_lv2",
+      "category": "building",
+      "displayText": "大饭店 2级",
+      "color": "蓝色",
+      "path": "building/hotel_lv2.png"
+    },
+    {
+      "name": "hotel_lv3",
+      "category": "building",
+      "displayText": "大饭店 3级",
+      "color": "紫色",
+      "path": "building/hotel_lv3.png"
+    },
+    {
+      "name": "hotel_lv4",
+      "category": "building",
+      "displayText": "大饭店 4级",
+      "color": "橙色",
+      "path": "building/hotel_lv4.png"
+    },
+    {
+      "name": "hotel_lv5",
+      "category": "building",
+      "displayText": "大饭店 5级",
+      "color": "金色",
+      "path": "building/hotel_lv5.png"
+    }
+  ]
+}
