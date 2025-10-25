@@ -37,7 +37,12 @@
     "list-actors-local": "ts-node src/generateActorsLocal.ts --list",
     "process-actors": "ts-node src/processActorImages.ts",
     "process-actors-256": "ts-node src/processActorImages.ts --size=256",
-    "process-actors-overwrite": "ts-node src/processActorImages.ts --overwrite --backup"
+    "process-actors-overwrite": "ts-node src/processActorImages.ts --overwrite --backup",
+    "generate-dice": "ts-node src/generateHorizontalCross.ts dice",
+    "generate-dice-dots": "ts-node src/generateHorizontalCross.ts dice --dots",
+    "generate-dice-numbers": "ts-node src/generateHorizontalCross.ts dice --dots=false",
+    "generate-horizontal-cross": "ts-node src/generateHorizontalCross.ts from-files",
+    "generate-dice-atlas": "ts-node src/generateHorizontalCross.ts dice --size=128 --output=./generated_dice_atlas"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",

@@ -1,0 +1,184 @@
+{
+  "atlas": "dice_horizontal_cross.png",
+  "gridSize": {
+    "cols": 4,
+    "rows": 3
+  },
+  "cellSize": {
+    "width": 128,
+    "height": 128
+  },
+  "totalSize": {
+    "width": 512,
+    "height": 384
+  },
+  "faceMapping": [
+    {
+      "face": "negativeX",
+      "gridPosition": {
+        "col": 0,
+        "row": 1
+      },
+      "uvRange": {
+        "u": [
+          0,
+          0.25
+        ],
+        "v": [
+          0.3333333333333333,
+          0.6666666666666666
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          0,
+          128
+        ],
+        "y": [
+          128,
+          256
+        ]
+      }
+    },
+    {
+      "face": "positiveZ",
+      "gridPosition": {
+        "col": 1,
+        "row": 1
+      },
+      "uvRange": {
+        "u": [
+          0.25,
+          0.5
+        ],
+        "v": [
+          0.3333333333333333,
+          0.6666666666666666
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          128,
+          256
+        ],
+        "y": [
+          128,
+          256
+        ]
+      }
+    },
+    {
+      "face": "positiveX",
+      "gridPosition": {
+        "col": 2,
+        "row": 1
+      },
+      "uvRange": {
+        "u": [
+          0.5,
+          0.75
+        ],
+        "v": [
+          0.3333333333333333,
+          0.6666666666666666
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          256,
+          384
+        ],
+        "y": [
+          128,
+          256
+        ]
+      }
+    },
+    {
+      "face": "negativeZ",
+      "gridPosition": {
+        "col": 3,
+        "row": 1
+      },
+      "uvRange": {
+        "u": [
+          0.75,
+          1
+        ],
+        "v": [
+          0.3333333333333333,
+          0.6666666666666666
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          384,
+          512
+        ],
+        "y": [
+          128,
+          256
+        ]
+      }
+    },
+    {
+      "face": "positiveY",
+      "gridPosition": {
+        "col": 1,
+        "row": 2
+      },
+      "uvRange": {
+        "u": [
+          0.25,
+          0.5
+        ],
+        "v": [
+          0.6666666666666666,
+          1
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          128,
+          256
+        ],
+        "y": [
+          256,
+          384
+        ]
+      }
+    },
+    {
+      "face": "negativeY",
+      "gridPosition": {
+        "col": 1,
+        "row": 0
+      },
+      "uvRange": {
+        "u": [
+          0.25,
+          0.5
+        ],
+        "v": [
+          0,
+          0.3333333333333333
+        ]
+      },
+      "pixelRange": {
+        "x": [
+          128,
+          256
+        ],
+        "y": [
+          0,
+          128
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "cocos": "Use this atlas with custom shader supporting horizontal cross UV mapping",
+    "unity": "Compatible with Unity's Cubemap texture import settings",
+    "threejs": "Use with THREE.CubeTextureLoader or custom geometry UV"
+  }
+}
