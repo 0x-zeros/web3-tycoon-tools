@@ -1,0 +1,98 @@
+{
+  "timestamp": "2025-10-25T02:55:58.866Z",
+  "summary": {
+    "total": 8,
+    "successful": 8,
+    "failed": 0
+  },
+  "cards": [
+    {
+      "kind": 0,
+      "name": "遥控骰子",
+      "description": "控制下一次移动到指定位置",
+      "rarity": 0,
+      "rarityName": "普通",
+      "displayText": "遥控骰子",
+      "fileName": "move_ctrl.png",
+      "targetType": 2,
+      "value": 3
+    },
+    {
+      "kind": 1,
+      "name": "路障卡",
+      "description": "在地块上放置路障",
+      "rarity": 0,
+      "rarityName": "普通",
+      "displayText": "路障卡",
+      "fileName": "barrier.png",
+      "targetType": 2,
+      "value": 0
+    },
+    {
+      "kind": 2,
+      "name": "炸弹卡",
+      "description": "在地块上放置炸弹",
+      "rarity": 1,
+      "rarityName": "稀有",
+      "displayText": "炸弹卡",
+      "fileName": "bomb.png",
+      "targetType": 2,
+      "value": 0
+    },
+    {
+      "kind": 3,
+      "name": "免租卡",
+      "description": "本回合避免支付租金",
+      "rarity": 1,
+      "rarityName": "稀有",
+      "displayText": "免租卡",
+      "fileName": "rent_free.png",
+      "targetType": 0,
+      "value": 1
+    },
+    {
+      "kind": 4,
+      "name": "冰冻卡",
+      "description": "冻结一个玩家一回合",
+      "rarity": 2,
+      "rarityName": "史诗",
+      "displayText": "冰冻卡",
+      "fileName": "freeze.png",
+      "targetType": 1,
+      "value": 1
+    },
+    {
+      "kind": 5,
+      "name": "狗狗卡",
+      "description": "在地块上放置恶犬",
+      "rarity": 1,
+      "rarityName": "稀有",
+      "displayText": "狗狗卡",
+      "fileName": "dog.png",
+      "targetType": 2,
+      "value": 0
+    },
+    {
+      "kind": 6,
+      "name": "机器娃娃",
+      "description": "清除一段路上的所有NPC",
+      "rarity": 0,
+      "rarityName": "普通",
+      "displayText": "机器娃娃",
+      "fileName": "cleanse.png",
+      "targetType": 2,
+      "value": 0
+    },
+    {
+      "kind": 7,
+      "name": "转向卡",
+      "description": "改变移动方向",
+      "rarity": 0,
+      "rarityName": "普通",
+      "displayText": "转向卡",
+      "fileName": "turn.png",
+      "targetType": 0,
+      "value": 0
+    }
+  ]
+}

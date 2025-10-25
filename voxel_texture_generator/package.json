@@ -42,7 +42,11 @@
     "generate-dice-dots": "ts-node src/generateHorizontalCross.ts dice --dots",
     "generate-dice-numbers": "ts-node src/generateHorizontalCross.ts dice --dots=false",
     "generate-horizontal-cross": "ts-node src/generateHorizontalCross.ts from-files",
-    "generate-dice-atlas": "ts-node src/generateHorizontalCross.ts dice --size=128 --output=./generated_dice_atlas"
+    "generate-dice-atlas": "ts-node src/generateHorizontalCross.ts dice --size=128 --output=./generated_dice_atlas",
+    "generate-cards-local": "ts-node src/generateCardsLocal.ts",
+    "generate-cards-local-test": "ts-node src/generateCardsLocal.ts --cards=0,1,2",
+    "generate-cards-local-rarity": "ts-node src/generateCardsLocal.ts --rarity=1",
+    "list-cards-local": "ts-node src/generateCardsLocal.ts --list"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
