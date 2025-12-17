@@ -1,0 +1,295 @@
+#!/bin/bash
+#
+# WireGuard 简易安装脚本（适用于 Ubuntu 24 + 仅 IPv6 公网 VPS，例如 AWS）
+#
+# 使用前提：
+#   - 必须使用 root 运行（例如先执行：sudo -i）
+#   - VPS 只有 IPv6 公网地址（没有 IPv4 公网）
+#   - 操作系统为 Ubuntu 24（官方源中自带 WireGuard 软件包）
+#   - 云厂商安全组 / 防火墙（如 AWS Security Group）需要你在网页控制台手动放行 UDP 端口
+#
+# 本脚本做的事情：
+#   - 安装：wireguard, wireguard-tools, qrencode, curl, iptables, ip6tables
+#   - 生成 1 组服务端密钥 + 2 组客户端密钥
+#   - 生成服务端配置：/etc/wireguard/wg0.conf
+#   - 生成 2 个客户端配置：/etc/wireguard/client1.conf 和 client2.conf
+#   - 开启 IPv4 / IPv6 转发
+#   - 使用服务器 IPv6 公网地址作为 Endpoint，客户端走全局流量 (0.0.0.0/0, ::/0)
+#   - 为每个客户端配置生成二维码，方便 WireGuard 客户端扫码导入
+#
+# 重要说明：
+#   - 你必须在云厂商控制台中手动放行 WG_PORT（默认 51820）的 UDP 端口。
+#   - IPv6 一般不需要 NAT，本脚本只为 IPv6 添加转发规则（FORWARD），不做 IPv6 NAT。
+#   - 保留了一些 ip6tables NAT 的示例（注释掉），仅供测试用，不熟悉请不要打开。
+#
+# 使用方法：
+#   1）在服务器上：
+#        sudo -i
+#        chmod +x ubuntu_wireguard_install.sh
+#        ./ubuntu_wireguard_install.sh
+#   2）在云控制台（如 AWS Security Group）中手动放行 UDP WG_PORT 端口（默认 51820）。
+#   3）在客户端：
+#        - 使用 WireGuard 手机/桌面客户端扫描终端里显示的二维码，或
+#        - 将 /etc/wireguard/client1.conf 或 client2.conf 拷贝到本地导入。
+#
+
+# set -e: 只要有任意命令返回非 0（失败），整个脚本立即退出，避免在错误状态下继续执行
+set -e
+
+### 基本配置（如需调整端口或内网网段，可以改这里）
+
+WG_IFACE="wg0"                        # WireGuard 网卡名称
+WG_PORT=51820                         # WireGuard 监听端口（UDP）
+WG_IPV4_NET="10.0.0.0/24"             # 隧道内 IPv4 网段（目前只用到 10.0.0.1/2/3）
+WG_IPV6_NET="fd10:db31:203:ab31::/64" # 隧道内 IPv6 网段（目前只用到 ::1/::2/::3）
+
+# 服务端在隧道内的 IPv4 / IPv6 地址
+WG_IPV4_SERVER="10.0.0.1"
+WG_IPV6_SERVER="fd10:db31:203:ab31::1"
+
+# 客户端 1 在隧道内的 IPv4 / IPv6 地址
+WG_IPV4_CLIENT1="10.0.0.2"
+WG_IPV6_CLIENT1="fd10:db31:203:ab31::2"
+
+# 客户端 2 在隧道内的 IPv4 / IPv6 地址
+WG_IPV4_CLIENT2="10.0.0.3"
+WG_IPV6_CLIENT2="fd10:db31:203:ab31::3"
+
+DNS_SERVERS="1.1.1.1,2606:4700:4700::1111"  # 客户端使用的 DNS
+MTU=1420                                     # MTU 一般 1420 即可
+
+### 简单日志函数（只是输出前缀）
+
+info()  { echo "[INFO] $*"; }
+warn()  { echo "[WARN] $*"; }
+error() { echo "[ERROR] $*" >&2; }
+
+### 1. 基础检查
+
+# 检查是否 root 用户
+if [ "$(id -u)" -ne 0 ]; then
+  error "必须使用 root 运行本脚本，例如先执行：sudo -i"
+  exit 1
+fi
+
+# 简单判断是不是 Debian/Ubuntu 系统（有 apt-get 就基本可以）
+if ! command -v apt-get >/dev/null 2>&1; then
+  error "本脚本仅适用于使用 apt-get 的 Debian/Ubuntu 系统。"
+  exit 1
+fi
+
+### 2. 安装依赖软件
+
+info "更新软件包索引并安装所需软件..."
+apt-get update -y
+apt-get install -y wireguard wireguard-tools qrencode curl iptables ip6tables
+
+### 3. 准备 WireGuard 配置目录
+
+info "创建 /etc/wireguard 目录并设置权限..."
+mkdir -p /etc/wireguard
+chmod 700 /etc/wireguard
+cd /etc/wireguard
+
+### 4. 生成密钥（服务端 + 2 个客户端）
+
+info "生成服务端和两个客户端的密钥对..."
+
+# 服务端密钥：wg genkey 生成私钥，管道给 wg pubkey 生成公钥
+wg genkey | tee server_private.key | wg pubkey > server_public.key
+chmod 600 server_private.key server_public.key
+
+# 客户端 1 密钥
+wg genkey | tee client1_private.key | wg pubkey > client1_public.key
+chmod 600 client1_private.key client1_public.key
+
+# 客户端 2 密钥
+wg genkey | tee client2_private.key | wg pubkey > client2_public.key
+chmod 600 client2_private.key client2_public.key
+
+# 从文件中读出密钥内容，后面写入配置文件用
+SERVER_PRIVATE_KEY=$(cat server_private.key)
+SERVER_PUBLIC_KEY=$(cat server_public.key)
+
+CLIENT1_PRIVATE_KEY=$(cat client1_private.key)
+CLIENT1_PUBLIC_KEY=$(cat client1_public.key)
+
+CLIENT2_PRIVATE_KEY=$(cat client2_private.key)
+CLIENT2_PUBLIC_KEY=$(cat client2_public.key)
+
+### 5. 获取服务器 IPv6 公网地址
+
+info "尝试自动检测服务器 IPv6 公网地址..."
+# curl -6 : 强制使用 IPv6 访问 ip.sb，如果失败则返回空字符串
+SERVER_IPV6=$(curl -6 -s --max-time 5 ip.sb || true)
+
+# 如果自动检测失败，就让你手动输入
+if [ -z "$SERVER_IPV6" ]; then
+  warn "自动检测 IPv6 地址失败。"
+  read -rp "请输入服务器 IPv6 公网地址（例如 2406:xxxx:....）： " SERVER_IPV6
+fi
+
+info "服务器 Endpoint 将使用: [${SERVER_IPV6}]:${WG_PORT}"
+
+### 6. 检测出网网卡名称（用于做 NAT）
+
+info "检测服务器主要出网网卡名称..."
+
+# 优先尝试通过 IPv4 默认路由找出网网卡（即使 IPv6-only VPS，很多也有一个 IPv4 默认路由）
+MAIN_IF=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
+
+# 如果 IPv4 默认路由找不到，就退化为“第一个非 lo 网卡”
+if [ -z "$MAIN_IF" ]; then
+  MAIN_IF=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -n1 || true)
+fi
+
+if [ -z "$MAIN_IF" ]; then
+  error "无法自动检测出网网卡，请在脚本中手动设置 MAIN_IF。"
+  exit 1
+fi
+
+info "使用的出网网卡为: ${MAIN_IF}"
+
+### 7. 开启 IPv4 和 IPv6 转发
+
+info "开启 IPv4 和 IPv6 转发功能..."
+
+# 立即生效的内核参数设置
+sysctl -w net.ipv4.ip_forward=1 >/dev/null
+sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null
+
+# 写入 /etc/sysctl.conf，保证重启后依然生效（如果之前没有配置过才追加）
+if ! grep -q "net.ipv4.ip_forward" /etc/sysctl.conf 2>/dev/null; then
+  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+fi
+if ! grep -q "net.ipv6.conf.all.forwarding" /etc/sysctl.conf 2>/dev/null; then
+  echo "net.ipv6.conf.all.forwarding = 1" >> /etc/sysctl.conf
+fi
+
+### 8. 生成服务端配置 wg0.conf
+
+info "生成 /etc/wireguard/${WG_IFACE}.conf ..."
+
+cat > "/etc/wireguard/${WG_IFACE}.conf" <<EOF
+[Interface]
+# 服务端的私钥（非常重要，请勿泄露）
+PrivateKey = ${SERVER_PRIVATE_KEY}
+
+# 服务端在隧道内的地址（一个 IPv4 + 一个 IPv6）
+Address = ${WG_IPV4_SERVER}/24
+Address = ${WG_IPV6_SERVER}/64
+
+ListenPort = ${WG_PORT}
+MTU = ${MTU}
+
+# IPv4 防火墙及 NAT 规则：
+# - 允许 wg0 进/出方向转发
+# - 对从 wg0 出到主网卡的 IPv4 流量做 MASQUERADE（源地址伪装为服务器出网 IP）
+PostUp   = iptables -A FORWARD -i ${WG_IFACE} -j ACCEPT; iptables -A FORWARD -o ${WG_IFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o ${MAIN_IF} -j MASQUERADE
+PostDown = iptables -D FORWARD -i ${WG_IFACE} -j ACCEPT; iptables -D FORWARD -o ${WG_IFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o ${MAIN_IF} -j MASQUERADE
+
+# IPv6 防火墙规则：只做转发，不做 NAT
+PostUp   = ip6tables -A FORWARD -i ${WG_IFACE} -j ACCEPT; ip6tables -A FORWARD -o ${WG_IFACE} -j ACCEPT
+PostDown = ip6tables -D FORWARD -i ${WG_IFACE} -j ACCEPT; ip6tables -D FORWARD -o ${WG_IFACE} -j ACCEPT
+
+# IPv6 NAT 示例（一般用不到，除非你非常清楚自己要做什么）
+#PostUp   = ip6tables -t nat -A POSTROUTING -o ${MAIN_IF} -j MASQUERADE
+#PostDown = ip6tables -t nat -D POSTROUTING -o ${MAIN_IF} -j MASQUERADE
+
+# 客户端 1：在服务端视角下允许的隧道内 IP
+[Peer]
+PublicKey = ${CLIENT1_PUBLIC_KEY}
+# 每个客户端一个固定 IP（IPv4 /32 + IPv6 /128）
+AllowedIPs = ${WG_IPV4_CLIENT1}/32, ${WG_IPV6_CLIENT1}/128
+
+# 客户端 2
+[Peer]
+PublicKey = ${CLIENT2_PUBLIC_KEY}
+AllowedIPs = ${WG_IPV4_CLIENT2}/32, ${WG_IPV6_CLIENT2}/128
+EOF
+
+chmod 600 "/etc/wireguard/${WG_IFACE}.conf"
+
+### 9. 生成客户端 client1.conf 和 client2.conf
+
+info "生成 client1.conf 和 client2.conf ..."
+
+# 客户端 1 配置
+cat > /etc/wireguard/client1.conf <<EOF
+[Interface]
+# 客户端 1 私钥
+PrivateKey = ${CLIENT1_PRIVATE_KEY}
+# 客户端在隧道内的 IPv4/IPv6 地址
+Address = ${WG_IPV4_CLIENT1}/24
+Address = ${WG_IPV6_CLIENT1}/64
+# 使用服务器为其提供 DNS（或公共 DNS）
+DNS = ${DNS_SERVERS}
+MTU = ${MTU}
+
+[Peer]
+# 对端为服务器，使用服务器公钥
+PublicKey = ${SERVER_PUBLIC_KEY}
+# 使用服务器 IPv6 公网地址和端口
+Endpoint = [${SERVER_IPV6}]:${WG_PORT}
+# 把所有 IPv4 和 IPv6 流量都走隧道
+AllowedIPs = 0.0.0.0/0, ::/0
+# NAT 环境下保持心跳（秒），一般 25 即可
+PersistentKeepalive = 25
+EOF
+
+chmod 600 /etc/wireguard/client1.conf
+
+# 客户端 2 配置
+cat > /etc/wireguard/client2.conf <<EOF
+[Interface]
+PrivateKey = ${CLIENT2_PRIVATE_KEY}
+Address = ${WG_IPV4_CLIENT2}/24
+Address = ${WG_IPV6_CLIENT2}/64
+DNS = ${DNS_SERVERS}
+MTU = ${MTU}
+
+[Peer]
+PublicKey = ${SERVER_PUBLIC_KEY}
+Endpoint = [${SERVER_IPV6}]:${WG_PORT}
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
+EOF
+
+chmod 600 /etc/wireguard/client2.conf
+
+### 10. 启动 WireGuard 并设为开机自启
+
+info "启动 WireGuard 接口 ${WG_IFACE}..."
+
+# 如果 wg0 已经存在，先尝试关闭（失败忽略）
+wg-quick down "${WG_IFACE}" 2>/dev/null || true
+
+# 启动 wg0
+wg-quick up "${WG_IFACE}"
+# 设置为开机自动启动
+systemctl enable "wg-quick@${WG_IFACE}" >/dev/null
+
+### 11. 显示状态和二维码
+
+echo
+info "当前 WireGuard 状态："
+wg show
+
+echo
+info "客户端 1 配置文件路径：/etc/wireguard/client1.conf"
+info "客户端 2 配置文件路径：/etc/wireguard/client2.conf"
+
+echo
+info "客户端 1 二维码（可使用 WireGuard App 扫码导入）："
+qrencode -t ansiutf8 < /etc/wireguard/client1.conf || true
+
+echo
+info "客户端 2 二维码："
+qrencode -t ansiutf8 < /etc/wireguard/client2.conf || true
+
+echo
+info "全部完成。"
+echo " - 服务器 Endpoint: [${SERVER_IPV6}]:${WG_PORT}"
+echo " - WireGuard 接口名称: ${WG_IFACE}"
+echo " - 请在云厂商防火墙 / 安全组中放行 UDP 端口 ${WG_PORT}。"
+echo
