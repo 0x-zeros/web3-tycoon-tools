@@ -36,6 +36,30 @@
 # set -e: 只要有任意命令返回非 0（失败），整个脚本立即退出，避免在错误状态下继续执行
 set -e
 
+### 清理函数和错误处理
+
+# 脚本开始时的状态标记
+SCRIPT_STAGE="init"
+
+cleanup_on_error() {
+  local exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    echo ""
+    echo "[ERROR] 脚本在 ${SCRIPT_STAGE} 阶段执行失败 (退出码: ${exit_code})"
+    echo "[INFO] 正在尝试清理..."
+
+    # 如果 WireGuard 接口已启动，尝试关闭
+    if [ -n "${WG_IFACE:-}" ] && ip link show "${WG_IFACE}" >/dev/null 2>&1; then
+      echo "[INFO] 关闭 WireGuard 接口 ${WG_IFACE}..."
+      wg-quick down "${WG_IFACE}" 2>/dev/null || true
+    fi
+
+    echo "[INFO] 清理完成。请检查错误信息后重新运行脚本。"
+  fi
+}
+
+trap cleanup_on_error EXIT
+
 ### 基本配置（如需调整端口或内网网段，可以改这里）
 
 WG_IFACE="wg0"                        # WireGuard 网卡名称
@@ -55,6 +79,7 @@ WG_IPV6_CLIENT1="fd10:db31:203:ab31::2"
 WG_IPV4_CLIENT2="10.0.0.3"
 WG_IPV6_CLIENT2="fd10:db31:203:ab31::3"
 
+# DNS 服务器配置（默认 Cloudflare）
 DNS_SERVERS="1.1.1.1,2606:4700:4700::1111"  # 客户端使用的 DNS
 MTU=1420                                     # MTU 一般 1420 即可
 
@@ -64,7 +89,37 @@ info()  { echo "[INFO] $*"; }
 warn()  { echo "[WARN] $*"; }
 error() { echo "[ERROR] $*" >&2; }
 
+### IPv6 地址格式验证函数
+validate_ipv6() {
+  local ipv6="$1"
+  # 简单的 IPv6 格式验证：至少包含一个冒号
+  if [[ -z "$ipv6" ]]; then
+    return 1
+  fi
+  # 检查是否包含冒号（IPv6的基本特征）
+  if [[ ! "$ipv6" =~ : ]]; then
+    return 1
+  fi
+  # 使用 ping6 或 ip 命令验证格式（如果地址格式错误，这些命令会失败）
+  if command -v ping6 >/dev/null 2>&1; then
+    ping6 -c 1 -W 1 "$ipv6" >/dev/null 2>&1 && return 0
+  fi
+  # 备用验证：尝试用 ip 命令解析
+  if ip -6 route get "$ipv6" >/dev/null 2>&1; then
+    return 0
+  fi
+  # 如果上述验证都不可用，使用正则表达式进行基础验证
+  if [[ "$ipv6" =~ ^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$ ]] || \
+     [[ "$ipv6" =~ ^::([0-9a-fA-F]{0,4}:){0,6}[0-9a-fA-F]{0,4}$ ]] || \
+     [[ "$ipv6" =~ ^([0-9a-fA-F]{0,4}:){1,6}:[0-9a-fA-F]{0,4}$ ]]; then
+    return 0
+  fi
+  return 1
+}
+
 ### 1. 基础检查
+
+SCRIPT_STAGE="基础检查"
 
 # 检查是否 root 用户
 if [ "$(id -u)" -ne 0 ]; then
@@ -78,7 +133,47 @@ if ! command -v apt-get >/dev/null 2>&1; then
   exit 1
 fi
 
+### 1.5. 选择 DNS 服务器
+
+info "请选择客户端使用的 DNS 服务器："
+echo "  1) Cloudflare (1.1.1.1, 2606:4700:4700::1111) [默认]"
+echo "  2) Google (8.8.8.8, 2001:4860:4860::8888)"
+echo "  3) 阿里云 (223.5.5.5, 2400:3200::1)"
+echo "  4) 腾讯云 (119.29.29.29, 2402:4e00::)"
+echo "  5) 自定义"
+
+read -rp "请输入选项 (1-5, 默认为 1): " dns_choice
+
+case "${dns_choice:-1}" in
+  1)
+    DNS_SERVERS="1.1.1.1,2606:4700:4700::1111"
+    info "已选择 Cloudflare DNS"
+    ;;
+  2)
+    DNS_SERVERS="8.8.8.8,2001:4860:4860::8888"
+    info "已选择 Google DNS"
+    ;;
+  3)
+    DNS_SERVERS="223.5.5.5,2400:3200::1"
+    info "已选择阿里云 DNS"
+    ;;
+  4)
+    DNS_SERVERS="119.29.29.29,2402:4e00::"
+    info "已选择腾讯云 DNS"
+    ;;
+  5)
+    read -rp "请输入自定义 DNS（格式：IPv4,IPv6 或仅 IPv4）： " DNS_SERVERS
+    info "已设置自定义 DNS: ${DNS_SERVERS}"
+    ;;
+  *)
+    warn "无效选项，使用默认 Cloudflare DNS"
+    DNS_SERVERS="1.1.1.1,2606:4700:4700::1111"
+    ;;
+esac
+
 ### 2. 安装依赖软件
+
+SCRIPT_STAGE="安装依赖软件"
 
 info "更新软件包索引并安装所需软件..."
 apt-get update -y
@@ -92,6 +187,8 @@ chmod 700 /etc/wireguard
 cd /etc/wireguard
 
 ### 4. 生成密钥（服务端 + 2 个客户端）
+
+SCRIPT_STAGE="生成密钥"
 
 info "生成服务端和两个客户端的密钥对..."
 
@@ -129,16 +226,27 @@ if [ -z "$SERVER_IPV6" ]; then
   read -rp "请输入服务器 IPv6 公网地址（例如 2406:xxxx:....）： " SERVER_IPV6
 fi
 
+# 验证 IPv6 地址格式
+while ! validate_ipv6 "$SERVER_IPV6"; do
+  warn "输入的 IPv6 地址格式不正确或无法访问: ${SERVER_IPV6}"
+  read -rp "请重新输入有效的服务器 IPv6 公网地址： " SERVER_IPV6
+done
+
 info "服务器 Endpoint 将使用: [${SERVER_IPV6}]:${WG_PORT}"
 
 ### 6. 检测出网网卡名称（用于做 NAT）
 
 info "检测服务器主要出网网卡名称..."
 
-# 优先尝试通过 IPv4 默认路由找出网网卡（即使 IPv6-only VPS，很多也有一个 IPv4 默认路由）
-MAIN_IF=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
+# 优先尝试通过 IPv6 默认路由找出网网卡（适用于 IPv6-only VPS）
+MAIN_IF=$(ip -o -6 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
 
-# 如果 IPv4 默认路由找不到，就退化为“第一个非 lo 网卡”
+# 如果 IPv6 默认路由找不到，再尝试 IPv4 默认路由
+if [ -z "$MAIN_IF" ]; then
+  MAIN_IF=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
+fi
+
+# 如果都找不到，就退化为"第一个非 lo 网卡"
 if [ -z "$MAIN_IF" ]; then
   MAIN_IF=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -n1 || true)
 fi
@@ -220,8 +328,8 @@ cat > /etc/wireguard/client1.conf <<EOF
 # 客户端 1 私钥
 PrivateKey = ${CLIENT1_PRIVATE_KEY}
 # 客户端在隧道内的 IPv4/IPv6 地址
-Address = ${WG_IPV4_CLIENT1}/24
-Address = ${WG_IPV6_CLIENT1}/64
+Address = ${WG_IPV4_CLIENT1}/32
+Address = ${WG_IPV6_CLIENT1}/128
 # 使用服务器为其提供 DNS（或公共 DNS）
 DNS = ${DNS_SERVERS}
 MTU = ${MTU}
@@ -243,8 +351,8 @@ chmod 600 /etc/wireguard/client1.conf
 cat > /etc/wireguard/client2.conf <<EOF
 [Interface]
 PrivateKey = ${CLIENT2_PRIVATE_KEY}
-Address = ${WG_IPV4_CLIENT2}/24
-Address = ${WG_IPV6_CLIENT2}/64
+Address = ${WG_IPV4_CLIENT2}/32
+Address = ${WG_IPV6_CLIENT2}/128
 DNS = ${DNS_SERVERS}
 MTU = ${MTU}
 
@@ -259,6 +367,8 @@ chmod 600 /etc/wireguard/client2.conf
 
 ### 10. 启动 WireGuard 并设为开机自启
 
+SCRIPT_STAGE="启动WireGuard"
+
 info "启动 WireGuard 接口 ${WG_IFACE}..."
 
 # 如果 wg0 已经存在，先尝试关闭（失败忽略）
@@ -266,8 +376,13 @@ wg-quick down "${WG_IFACE}" 2>/dev/null || true
 
 # 启动 wg0
 wg-quick up "${WG_IFACE}"
+
 # 设置为开机自动启动
-systemctl enable "wg-quick@${WG_IFACE}" >/dev/null
+if ! systemctl enable "wg-quick@${WG_IFACE}" >/dev/null 2>&1; then
+  warn "设置开机自启失败，请稍后手动执行：systemctl enable wg-quick@${WG_IFACE}"
+else
+  info "已设置 WireGuard 开机自启"
+fi
 
 ### 11. 显示状态和二维码
 
