@@ -9,7 +9,7 @@
 #   - 云厂商安全组 / 防火墙（如 AWS Security Group）需要你在网页控制台手动放行 UDP 端口
 #
 # 本脚本做的事情：
-#   - 安装：wireguard, wireguard-tools, qrencode, curl, iptables, ip6tables
+#   - 安装：wireguard, wireguard-tools, qrencode, curl, iptables（包含 ip6tables 命令）
 #   - 生成 1 组服务端密钥 + 2 组客户端密钥
 #   - 生成服务端配置：/etc/wireguard/wg0.conf
 #   - 生成 2 个客户端配置：/etc/wireguard/client1.conf 和 client2.conf
@@ -189,7 +189,7 @@ SCRIPT_STAGE="安装依赖软件"
 
 info "更新软件包索引并安装所需软件..."
 apt-get update -y
-apt-get install -y wireguard wireguard-tools qrencode curl iptables ip6tables
+apt-get install -y wireguard wireguard-tools qrencode curl iptables
 
 ### 3. 准备 WireGuard 配置目录
 
