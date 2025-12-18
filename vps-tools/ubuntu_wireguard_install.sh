@@ -22,6 +22,13 @@
 #   - IPv6 一般不需要 NAT，本脚本只为 IPv6 添加转发规则（FORWARD），不做 IPv6 NAT。
 #   - 保留了一些 ip6tables NAT 的示例（注释掉），仅供测试用，不熟悉请不要打开。
 #
+# 安全提示：
+#   - 本脚本生成的密钥保存在 /etc/wireguard/ 目录，权限为 600（仅 root 可读）
+#   - 请确保服务器 SSH 密钥安全，避免未授权访问（密钥泄露 = VPN 完全失陷）
+#   - 备份 /etc/wireguard/ 时请使用加密存储（如 GPG 加密的备份文件）
+#   - 建议定期轮换 WireGuard 密钥（重新运行脚本并更新客户端配置）
+#   - 本脚本的防火墙规则已限定只允许 WireGuard 网段流量，但仍需配合云厂商安全组使用
+#
 # 使用方法：
 #   1）在服务器上：
 #        sudo -i
@@ -33,8 +40,13 @@
 #        - 将 /etc/wireguard/client1.conf 或 client2.conf 拷贝到本地导入。
 #
 
-# set -e: 只要有任意命令返回非 0（失败），整个脚本立即退出，避免在错误状态下继续执行
+# 严格错误处理：
+# - set -e: 任意命令返回非0时立即退出
+# - set -u: 使用未定义变量时报错退出
+# - set -o pipefail: 管道中任意命令失败时整个管道返回失败
 set -e
+set -u
+set -o pipefail
 
 ### 清理函数和错误处理
 
@@ -217,10 +229,29 @@ CLIENT2_PUBLIC_KEY=$(cat client2_public.key)
 ### 5. 获取服务器 IPv6 公网地址
 
 info "尝试自动检测服务器 IPv6 公网地址..."
-# curl -6 : 强制使用 IPv6 访问 ip.sb，如果失败则返回空字符串
-SERVER_IPV6=$(curl -6 -s --max-time 5 ip.sb || true)
 
-# 如果自动检测失败，就让你手动输入
+# 优先方案1：从本地网卡配置中提取IPv6公网地址
+# 排除本地链路地址(fe80)、ULA地址(fc00/fd00)，只取全局单播地址
+SERVER_IPV6=$(ip -6 addr show scope global 2>/dev/null | \
+              grep -oP '(?<=inet6\s)[0-9a-f:]+(?=/)' | \
+              grep -v '^fe80' | grep -v '^fc' | grep -v '^fd' | \
+              head -n1 || true)
+
+if [ -n "$SERVER_IPV6" ]; then
+  info "从本地网卡获取到 IPv6 地址: ${SERVER_IPV6}"
+fi
+
+# 方案2：如果本地获取失败，使用HTTPS访问外部服务
+if [ -z "$SERVER_IPV6" ]; then
+  warn "从本地网卡获取IPv6失败，尝试使用外部服务..."
+  SERVER_IPV6=$(curl -6 -s --max-time 5 https://api64.ipify.org 2>/dev/null || \
+                curl -6 -s --max-time 5 https://ip.sb 2>/dev/null || true)
+  if [ -n "$SERVER_IPV6" ]; then
+    info "从外部服务获取到 IPv6 地址: ${SERVER_IPV6}"
+  fi
+fi
+
+# 方案3：手动输入
 if [ -z "$SERVER_IPV6" ]; then
   warn "自动检测 IPv6 地址失败。"
   read -rp "请输入服务器 IPv6 公网地址（例如 2406:xxxx:....）： " SERVER_IPV6
@@ -258,6 +289,12 @@ fi
 
 info "使用的出网网卡为: ${MAIN_IF}"
 
+# 校验网卡名称格式（只允许字母、数字、下划线、短横线、点）
+if [[ ! "$MAIN_IF" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+  error "检测到的网卡名称格式异常: ${MAIN_IF}，请手动检查"
+  exit 1
+fi
+
 ### 7. 开启 IPv4 和 IPv6 转发
 
 info "开启 IPv4 和 IPv6 转发功能..."
@@ -266,12 +303,22 @@ info "开启 IPv4 和 IPv6 转发功能..."
 sysctl -w net.ipv4.ip_forward=1 >/dev/null
 sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null
 
-# 写入 /etc/sysctl.conf，保证重启后依然生效（如果之前没有配置过才追加）
-if ! grep -q "net.ipv4.ip_forward" /etc/sysctl.conf 2>/dev/null; then
+# 写入 /etc/sysctl.conf，保证重启后依然生效
+# 使用sed修改已有配置，或追加新配置（避免重复配置冲突）
+if grep -q "^[[:space:]]*net.ipv4.ip_forward" /etc/sysctl.conf 2>/dev/null; then
+  sed -i 's/^[[:space:]]*net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf
+  info "已更新 net.ipv4.ip_forward = 1"
+else
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  info "已添加 net.ipv4.ip_forward = 1"
 fi
-if ! grep -q "net.ipv6.conf.all.forwarding" /etc/sysctl.conf 2>/dev/null; then
+
+if grep -q "^[[:space:]]*net.ipv6.conf.all.forwarding" /etc/sysctl.conf 2>/dev/null; then
+  sed -i 's/^[[:space:]]*net.ipv6.conf.all.forwarding.*/net.ipv6.conf.all.forwarding = 1/' /etc/sysctl.conf
+  info "已更新 net.ipv6.conf.all.forwarding = 1"
+else
   echo "net.ipv6.conf.all.forwarding = 1" >> /etc/sysctl.conf
+  info "已添加 net.ipv6.conf.all.forwarding = 1"
 fi
 
 ### 8. 生成服务端配置 wg0.conf
@@ -290,11 +337,11 @@ Address = ${WG_IPV6_SERVER}/64
 ListenPort = ${WG_PORT}
 MTU = ${MTU}
 
-# IPv4 防火墙及 NAT 规则：
-# - 允许 wg0 进/出方向转发
-# - 对从 wg0 出到主网卡的 IPv4 流量做 MASQUERADE（源地址伪装为服务器出网 IP）
-PostUp   = iptables -A FORWARD -i ${WG_IFACE} -j ACCEPT; iptables -A FORWARD -o ${WG_IFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o ${MAIN_IF} -j MASQUERADE
-PostDown = iptables -D FORWARD -i ${WG_IFACE} -j ACCEPT; iptables -D FORWARD -o ${WG_IFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o ${MAIN_IF} -j MASQUERADE
+# IPv4 防火墙及 NAT 规则（精细化版本）：
+# - FORWARD 规则限定 WireGuard 网段，防止非法流量
+# - NAT 只针对 WireGuard 网段，避免影响服务器其他流量
+PostUp   = iptables -A FORWARD -i ${WG_IFACE} -s ${WG_IPV4_NET} -j ACCEPT; iptables -A FORWARD -o ${WG_IFACE} -d ${WG_IPV4_NET} -j ACCEPT; iptables -t nat -A POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE
+PostDown = iptables -D FORWARD -i ${WG_IFACE} -s ${WG_IPV4_NET} -j ACCEPT; iptables -D FORWARD -o ${WG_IFACE} -d ${WG_IPV4_NET} -j ACCEPT; iptables -t nat -D POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE
 
 # IPv6 防火墙规则：只做转发，不做 NAT
 PostUp   = ip6tables -A FORWARD -i ${WG_IFACE} -j ACCEPT; ip6tables -A FORWARD -o ${WG_IFACE} -j ACCEPT
