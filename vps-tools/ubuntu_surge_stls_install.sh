@@ -136,6 +136,7 @@ STLS_PWD="$(rand_token)"
 mkdir -p /etc/snell /etc/shadowtls
 
 cat > /etc/snell/snell.conf <<EOF
+[snell-server]
 listen = 127.0.0.1:${BACKEND_PORT}
 psk = ${SNELL_PSK}
 reuse = true
