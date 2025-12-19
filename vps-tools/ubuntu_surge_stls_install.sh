@@ -15,7 +15,7 @@ fi
 STLS_PORT="${STLS_PORT:-443}"                 # ShadowTLS 对外端口（建议 443）
 TLS_DOMAIN="${TLS_DOMAIN:-www.cloudflare.com}" # 伪装域名（无需你拥有）
 TLS_TARGET_PORT="${TLS_TARGET_PORT:-443}"      # 伪装目标端口（通常固定 443）
-BACKEND_PORT="${BACKEND_PORT:-$(shuf -i 20000-60000 -n 1)}"  # Snell 本地端口
+BACKEND_PORT="${BACKEND_PORT:-8388}"  # Snell 本地端口（固定，避免配置不一致）
 
 # ================== 小工具函数 ==================
 rand_token() { openssl rand -base64 32 | tr -d '=' | tr '+/' '-_' | tr -d '\n'; }
