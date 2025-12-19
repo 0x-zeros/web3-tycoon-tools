@@ -76,13 +76,24 @@ rm -rf "$TMPDIR"
 
 echo "【3/5】获取并安装 ShadowTLS（GitHub 最新版）..."
 STLS_API="https://api.github.com/repos/ihciah/shadow-tls/releases/latest"
+
+# 针对 x86_64 架构，匹配 x86_64 或 amd64；针对 aarch64 架构，匹配 aarch64
+if [[ "$STLS_ARCH" == "amd64" ]]; then
+  STLS_PATTERN="x86_64|amd64"
+else
+  STLS_PATTERN="$STLS_ARCH"
+fi
+
 STLS_URL="$(
   curl -fsSL "$STLS_API" \
-  | jq -r --arg a "$STLS_ARCH" '.assets[] | select(.name|test("linux") and test($a)) | .browser_download_url' \
+  | jq -r --arg p "$STLS_PATTERN" '.assets[] | select(.name|test("linux") and test($p)) | .browser_download_url' \
   | head -n1
 )"
 if [[ -z "${STLS_URL:-}" || "${STLS_URL}" == "null" ]]; then
-  echo "无法自动找到 ShadowTLS 的 linux(${STLS_ARCH}) 安装包。"
+  echo "❌ 无法自动找到 ShadowTLS 的 linux(${STLS_ARCH}) 安装包。"
+  echo "可用的 Linux 文件："
+  curl -fsSL "$STLS_API" | jq -r '.assets[].name' | grep -i linux || true
+  echo ""
   echo "请手动查看 release assets：https://github.com/ihciah/shadow-tls/releases/latest"
   exit 1
 fi
