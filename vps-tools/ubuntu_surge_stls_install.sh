@@ -143,15 +143,16 @@ reuse = true
 ipv6 = false
 EOF
 
-cat > /etc/shadowtls/env <<EOF
-MODE=server
+# 保存 ShadowTLS 密码到文件（供后续查看）
+cat > /etc/shadowtls/config <<EOF
+# ShadowTLS v3 配置信息
 LISTEN=0.0.0.0:${STLS_PORT}
 SERVER=127.0.0.1:${BACKEND_PORT}
 TLS=${TLS_DOMAIN}:${TLS_TARGET_PORT}
 PASSWORD=${STLS_PWD}
 EOF
 
-chmod 600 /etc/snell/snell.conf /etc/shadowtls/env
+chmod 600 /etc/snell/snell.conf /etc/shadowtls/config
 
 cat > /etc/systemd/system/snell.service <<'EOF'
 [Unit]
@@ -174,7 +175,7 @@ ReadWritePaths=/etc/snell
 WantedBy=multi-user.target
 EOF
 
-cat > /etc/systemd/system/shadowtls.service <<'EOF'
+cat > /etc/systemd/system/shadowtls.service <<EOF
 [Unit]
 Description=ShadowTLS v3 (server)
 After=network-online.target snell.service
@@ -182,15 +183,13 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/shadowtls/env
-ExecStart=/usr/local/bin/shadow-tls
+ExecStart=/usr/local/bin/shadow-tls --v3 server --listen 0.0.0.0:${STLS_PORT} --server 127.0.0.1:${BACKEND_PORT} --tls ${TLS_DOMAIN}:${TLS_TARGET_PORT} --password ${STLS_PWD}
 Restart=on-failure
 RestartSec=1
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/etc/shadowtls
 
 [Install]
 WantedBy=multi-user.target
