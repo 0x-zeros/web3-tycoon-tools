@@ -101,15 +101,28 @@ fi
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 curl -fsSL "$STLS_URL" -o "$TMPDIR/stls.pkg"
-# 兼容 tar.gz / zip（尽量简化：用 file 判断）
-if file "$TMPDIR/stls.pkg" | grep -qi 'gzip'; then
+
+# 检查文件类型并处理（支持 gzip/zip/直接可执行文件）
+FILE_TYPE="$(file "$TMPDIR/stls.pkg")"
+if echo "$FILE_TYPE" | grep -qi 'gzip'; then
+  # tar.gz 压缩包
   tar -xzf "$TMPDIR/stls.pkg" -C "$TMPDIR"
-else
+  STLS_BIN="$(find "$TMPDIR" -maxdepth 3 -type f -executable -name 'shadow-tls*' | head -n1 || true)"
+elif echo "$FILE_TYPE" | grep -qi 'zip'; then
+  # zip 压缩包
   unzip -q -o "$TMPDIR/stls.pkg" -d "$TMPDIR"
+  STLS_BIN="$(find "$TMPDIR" -maxdepth 3 -type f -executable -name 'shadow-tls*' | head -n1 || true)"
+elif echo "$FILE_TYPE" | grep -qi 'executable'; then
+  # 直接的可执行文件，不需要解压
+  STLS_BIN="$TMPDIR/stls.pkg"
+else
+  echo "❌ 未知的文件格式："
+  echo "$FILE_TYPE"
+  exit 1
 fi
-STLS_BIN="$(find "$TMPDIR" -maxdepth 3 -type f -name 'shadow-tls*' | head -n1 || true)"
+
 if [[ -z "${STLS_BIN:-}" ]]; then
-  echo "ShadowTLS 二进制未找到（解包结果异常）。"
+  echo "❌ ShadowTLS 二进制未找到（解包结果异常）。"
   exit 1
 fi
 install -m 0755 "$STLS_BIN" /usr/local/bin/shadow-tls
