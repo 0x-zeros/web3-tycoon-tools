@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# WireGuard 简易安装脚本（适用于 Ubuntu 24 + 仅 IPv6 公网 VPS，例如 AWS）
+# WireGuard 简易安装脚本（适用于 Ubuntu 24 + IPv4/IPv6 双栈 VPS）
 #
 # 使用前提：
 #   - 必须使用 root 运行（例如先执行：sudo -i）
-#   - VPS 只有 IPv6 公网地址（没有 IPv4 公网）
+#   - VPS 至少有 IPv4 公网地址（推荐 IPv4/IPv6 双栈）
 #   - 操作系统为 Ubuntu 24（官方源中自带 WireGuard 软件包）
 #   - 云厂商安全组 / 防火墙（如 AWS Security Group）需要你在网页控制台手动放行 UDP 端口
 #
@@ -14,12 +14,12 @@
 #   - 生成服务端配置：/etc/wireguard/wg0.conf
 #   - 生成 2 个客户端配置：/etc/wireguard/client1.conf 和 client2.conf
 #   - 开启 IPv4 / IPv6 转发
-#   - 使用服务器 IPv6 公网地址作为 Endpoint，客户端走全局流量 (0.0.0.0/0, ::/0)
+#   - 使用服务器 IPv4 公网地址作为 Endpoint，客户端走全局流量 (0.0.0.0/0, ::/0)
 #   - 为每个客户端配置生成二维码，方便 WireGuard 客户端扫码导入
 #
 # 重要说明：
 #   - 你必须在云厂商控制台中手动放行 WG_PORT（默认 51820）的 UDP 端口。
-#   - IPv6 一般不需要 NAT，本脚本只为 IPv6 添加转发规则（FORWARD），不做 IPv6 NAT。
+#   - IPv4 流量通过 NAT (MASQUERADE) 转发，IPv6 流量仅做转发 (FORWARD)，不做 NAT。
 #   - 保留了一些 ip6tables NAT 的示例（注释掉），仅供测试用，不熟悉请不要打开。
 #
 # 安全提示：
@@ -101,32 +101,26 @@ info()  { echo "[INFO] $*"; }
 warn()  { echo "[WARN] $*"; }
 error() { echo "[ERROR] $*" >&2; }
 
-### IPv6 地址格式验证函数
-validate_ipv6() {
-  local ipv6="$1"
-  # 简单的 IPv6 格式验证：至少包含一个冒号
-  if [[ -z "$ipv6" ]]; then
+### IPv4 地址格式验证函数
+validate_ipv4() {
+  local ipv4="$1"
+  # IPv4 格式验证：xxx.xxx.xxx.xxx
+  if [[ -z "$ipv4" ]]; then
     return 1
   fi
-  # 检查是否包含冒号（IPv6的基本特征）
-  if [[ ! "$ipv6" =~ : ]]; then
+  # 基础正则验证
+  if [[ ! "$ipv4" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     return 1
   fi
-  # 使用 ping6 或 ip 命令验证格式（如果地址格式错误，这些命令会失败）
-  if command -v ping6 >/dev/null 2>&1; then
-    ping6 -c 1 -W 1 "$ipv6" >/dev/null 2>&1 && return 0
-  fi
-  # 备用验证：尝试用 ip 命令解析
-  if ip -6 route get "$ipv6" >/dev/null 2>&1; then
-    return 0
-  fi
-  # 如果上述验证都不可用，使用正则表达式进行基础验证
-  if [[ "$ipv6" =~ ^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$ ]] || \
-     [[ "$ipv6" =~ ^::([0-9a-fA-F]{0,4}:){0,6}[0-9a-fA-F]{0,4}$ ]] || \
-     [[ "$ipv6" =~ ^([0-9a-fA-F]{0,4}:){1,6}:[0-9a-fA-F]{0,4}$ ]]; then
-    return 0
-  fi
-  return 1
+  # 验证每个数字段在 0-255 之间
+  local IFS='.'
+  local -a octets=($ipv4)
+  for octet in "${octets[@]}"; do
+    if ((octet > 255)); then
+      return 1
+    fi
+  done
+  return 0
 }
 
 ### 1. 基础检查
@@ -226,55 +220,56 @@ CLIENT1_PUBLIC_KEY=$(cat client1_public.key)
 CLIENT2_PRIVATE_KEY=$(cat client2_private.key)
 CLIENT2_PUBLIC_KEY=$(cat client2_public.key)
 
-### 5. 获取服务器 IPv6 公网地址
+### 5. 获取服务器 IPv4 公网地址
 
-info "尝试自动检测服务器 IPv6 公网地址..."
+info "尝试自动检测服务器 IPv4 公网地址..."
 
-# 优先方案1：从本地网卡配置中提取IPv6公网地址
-# 排除本地链路地址(fe80)、ULA地址(fc00/fd00)，只取全局单播地址
-SERVER_IPV6=$(ip -6 addr show scope global 2>/dev/null | \
-              grep -oP '(?<=inet6\s)[0-9a-f:]+(?=/)' | \
-              grep -v '^fe80' | grep -v '^fc' | grep -v '^fd' | \
+# 优先方案1：从本地网卡配置中提取IPv4公网地址
+# 排除本地回环地址(127.x.x.x)，只取全局地址
+SERVER_IPV4=$(ip -4 addr show scope global 2>/dev/null | \
+              grep -oP '(?<=inet\s)\d+(\.\d+){3}' | \
+              grep -v '^127\.' | \
               head -n1 || true)
 
-if [ -n "$SERVER_IPV6" ]; then
-  info "从本地网卡获取到 IPv6 地址: ${SERVER_IPV6}"
+if [ -n "$SERVER_IPV4" ]; then
+  info "从本地网卡获取到 IPv4 地址: ${SERVER_IPV4}"
 fi
 
 # 方案2：如果本地获取失败，使用HTTPS访问外部服务
-if [ -z "$SERVER_IPV6" ]; then
-  warn "从本地网卡获取IPv6失败，尝试使用外部服务..."
-  SERVER_IPV6=$(curl -6 -s --max-time 5 https://api64.ipify.org 2>/dev/null || \
-                curl -6 -s --max-time 5 https://ip.sb 2>/dev/null || true)
-  if [ -n "$SERVER_IPV6" ]; then
-    info "从外部服务获取到 IPv6 地址: ${SERVER_IPV6}"
+if [ -z "$SERVER_IPV4" ]; then
+  warn "从本地网卡获取IPv4失败，尝试使用外部服务..."
+  SERVER_IPV4=$(curl -4 -s --max-time 5 https://api.ipify.org 2>/dev/null || \
+                curl -4 -s --max-time 5 https://ipv4.icanhazip.com 2>/dev/null || \
+                curl -4 -s --max-time 5 https://ifconfig.me 2>/dev/null || true)
+  if [ -n "$SERVER_IPV4" ]; then
+    info "从外部服务获取到 IPv4 地址: ${SERVER_IPV4}"
   fi
 fi
 
 # 方案3：手动输入
-if [ -z "$SERVER_IPV6" ]; then
-  warn "自动检测 IPv6 地址失败。"
-  read -rp "请输入服务器 IPv6 公网地址（例如 2406:xxxx:....）： " SERVER_IPV6
+if [ -z "$SERVER_IPV4" ]; then
+  warn "自动检测 IPv4 地址失败。"
+  read -rp "请输入服务器 IPv4 公网地址（例如 1.2.3.4）： " SERVER_IPV4
 fi
 
-# 验证 IPv6 地址格式
-while ! validate_ipv6 "$SERVER_IPV6"; do
-  warn "输入的 IPv6 地址格式不正确或无法访问: ${SERVER_IPV6}"
-  read -rp "请重新输入有效的服务器 IPv6 公网地址： " SERVER_IPV6
+# 验证 IPv4 地址格式
+while ! validate_ipv4 "$SERVER_IPV4"; do
+  warn "输入的 IPv4 地址格式不正确: ${SERVER_IPV4}"
+  read -rp "请重新输入有效的服务器 IPv4 公网地址： " SERVER_IPV4
 done
 
-info "服务器 Endpoint 将使用: [${SERVER_IPV6}]:${WG_PORT}"
+info "服务器 Endpoint 将使用: ${SERVER_IPV4}:${WG_PORT}"
 
 ### 6. 检测出网网卡名称（用于做 NAT）
 
 info "检测服务器主要出网网卡名称..."
 
-# 优先尝试通过 IPv6 默认路由找出网网卡（适用于 IPv6-only VPS）
-MAIN_IF=$(ip -o -6 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
+# 优先尝试通过 IPv4 默认路由找出网网卡（适用于双栈或 IPv4 VPS）
+MAIN_IF=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
 
-# 如果 IPv6 默认路由找不到，再尝试 IPv4 默认路由
+# 如果 IPv4 默认路由找不到，再尝试 IPv6 默认路由
 if [ -z "$MAIN_IF" ]; then
-  MAIN_IF=$(ip -o -4 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
+  MAIN_IF=$(ip -o -6 route show to default 2>/dev/null | awk '{print $5}' | head -n1 || true)
 fi
 
 # 如果都找不到，就退化为"第一个非 lo 网卡"
@@ -384,8 +379,8 @@ MTU = ${MTU}
 [Peer]
 # 对端为服务器，使用服务器公钥
 PublicKey = ${SERVER_PUBLIC_KEY}
-# 使用服务器 IPv6 公网地址和端口
-Endpoint = [${SERVER_IPV6}]:${WG_PORT}
+# 使用服务器 IPv4 公网地址和端口
+Endpoint = ${SERVER_IPV4}:${WG_PORT}
 # 把所有 IPv4 和 IPv6 流量都走隧道
 AllowedIPs = 0.0.0.0/0, ::/0
 # NAT 环境下保持心跳（秒），一般 25 即可
@@ -405,7 +400,7 @@ MTU = ${MTU}
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC_KEY}
-Endpoint = [${SERVER_IPV6}]:${WG_PORT}
+Endpoint = ${SERVER_IPV4}:${WG_PORT}
 AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
@@ -451,7 +446,7 @@ qrencode -t ansiutf8 < /etc/wireguard/client2.conf || true
 
 echo
 info "全部完成。"
-echo " - 服务器 Endpoint: [${SERVER_IPV6}]:${WG_PORT}"
+echo " - 服务器 Endpoint: ${SERVER_IPV4}:${WG_PORT}"
 echo " - WireGuard 接口名称: ${WG_IFACE}"
 echo " - 请在云厂商防火墙 / 安全组中放行 UDP 端口 ${WG_PORT}。"
 echo
