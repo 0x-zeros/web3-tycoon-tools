@@ -332,17 +332,24 @@ Address = ${WG_IPV6_SERVER}/64
 ListenPort = ${WG_PORT}
 MTU = ${MTU}
 
-# IPv4 防火墙及 NAT 规则（精细化版本）：
+# 防火墙及 NAT 规则（IPv4 + IPv6 合并在同一条命令中）：
 # - FORWARD 规则限定 WireGuard 网段，防止非法流量
-# - NAT 只针对 WireGuard 网段，避免影响服务器其他流量
-PostUp   = iptables -A FORWARD -i ${WG_IFACE} -s ${WG_IPV4_NET} -j ACCEPT; iptables -A FORWARD -o ${WG_IFACE} -d ${WG_IPV4_NET} -j ACCEPT; iptables -t nat -A POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE
-PostDown = iptables -D FORWARD -i ${WG_IFACE} -s ${WG_IPV4_NET} -j ACCEPT; iptables -D FORWARD -o ${WG_IFACE} -d ${WG_IPV4_NET} -j ACCEPT; iptables -t nat -D POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE
+# - IPv4 使用 NAT (MASQUERADE)，IPv6 只做转发
+# - 使用 %i 占位符（wg-quick 会自动替换为接口名）
+# - 使用幂等性检查（-C || -A）避免规则重复叠加
+PostUp   = iptables -C FORWARD -i %i -s ${WG_IPV4_NET} -j ACCEPT 2>/dev/null || iptables -A FORWARD -i %i -s ${WG_IPV4_NET} -j ACCEPT; iptables -C FORWARD -o %i -d ${WG_IPV4_NET} -j ACCEPT 2>/dev/null || iptables -A FORWARD -o %i -d ${WG_IPV4_NET} -j ACCEPT; iptables -t nat -C POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE; ip6tables -C FORWARD -i %i -s ${WG_IPV6_NET} -j ACCEPT 2>/dev/null || ip6tables -A FORWARD -i %i -s ${WG_IPV6_NET} -j ACCEPT; ip6tables -C FORWARD -o %i -d ${WG_IPV6_NET} -j ACCEPT 2>/dev/null || ip6tables -A FORWARD -o %i -d ${WG_IPV6_NET} -j ACCEPT
+PostDown = iptables -D FORWARD -i %i -s ${WG_IPV4_NET} -j ACCEPT 2>/dev/null || true; iptables -D FORWARD -o %i -d ${WG_IPV4_NET} -j ACCEPT 2>/dev/null || true; iptables -t nat -D POSTROUTING -s ${WG_IPV4_NET} -o ${MAIN_IF} -j MASQUERADE 2>/dev/null || true; ip6tables -D FORWARD -i %i -s ${WG_IPV6_NET} -j ACCEPT 2>/dev/null || true; ip6tables -D FORWARD -o %i -d ${WG_IPV6_NET} -j ACCEPT 2>/dev/null || true
 
-# IPv6 防火墙规则：只做转发，不做 NAT
-PostUp   = ip6tables -A FORWARD -i ${WG_IFACE} -j ACCEPT; ip6tables -A FORWARD -o ${WG_IFACE} -j ACCEPT
-PostDown = ip6tables -D FORWARD -i ${WG_IFACE} -j ACCEPT; ip6tables -D FORWARD -o ${WG_IFACE} -j ACCEPT
-
-# IPv6 NAT 示例（一般用不到，除非你非常清楚自己要做什么）
+# IPv6 NAT（NAT66）示例 - 不推荐使用
+#
+# 为什么不推荐 NAT66：
+#   1. IPv6 设计理念是端到端可达，地址空间足够大，不需要 NAT
+#   2. 如果 VPS 没有从云服务商获得 IPv6 前缀路由授权，NAT66 也无法解决问题
+#      - 示例：客户端使用 ULA 地址 fd10:...:2，即使 NAT 后，云网络层仍不认识
+#      - 正确做法：向云服务商申请 IPv6 前缀路由（如 /64 或 /48）
+#   3. NAT66 破坏了 IPv6 的端到端透明性，是反模式
+#
+# 如果你非常清楚自己在做什么，并且确定需要 NAT66（极少见），可以取消下面注释：
 #PostUp   = ip6tables -t nat -A POSTROUTING -o ${MAIN_IF} -j MASQUERADE
 #PostDown = ip6tables -t nat -D POSTROUTING -o ${MAIN_IF} -j MASQUERADE
 
@@ -437,12 +444,22 @@ info "客户端 1 配置文件路径：/etc/wireguard/client1.conf"
 info "客户端 2 配置文件路径：/etc/wireguard/client2.conf"
 
 echo
-info "客户端 1 二维码（可使用 WireGuard App 扫码导入）："
-qrencode -t ansiutf8 < /etc/wireguard/client1.conf || true
+read -rp "是否显示客户端 1 的二维码？(y/N): " show_qr1
+if [[ "$show_qr1" =~ ^[Yy]$ ]]; then
+  info "客户端 1 二维码（可使用 WireGuard App 扫码导入）："
+  qrencode -t ansiutf8 < /etc/wireguard/client1.conf || true
+else
+  info "已跳过客户端 1 二维码显示"
+fi
 
 echo
-info "客户端 2 二维码："
-qrencode -t ansiutf8 < /etc/wireguard/client2.conf || true
+read -rp "是否显示客户端 2 的二维码？(y/N): " show_qr2
+if [[ "$show_qr2" =~ ^[Yy]$ ]]; then
+  info "客户端 2 二维码（可使用 WireGuard App 扫码导入）："
+  qrencode -t ansiutf8 < /etc/wireguard/client2.conf || true
+else
+  info "已跳过客户端 2 二维码显示"
+fi
 
 echo
 info "全部完成。"
