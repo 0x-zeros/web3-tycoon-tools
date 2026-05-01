@@ -1,5 +1,5 @@
 {
-  "name": "alpha lab",
+  "name": "tools",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {

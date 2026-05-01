@@ -76,7 +76,7 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
-# alpha-lab 现有 TypeScript 项目使用 pnpm
+# TypeScript 项目使用 pnpm
 RUN npm install -g pnpm@9 && pnpm --version
 
 # Set the default shell to zsh rather than sh
