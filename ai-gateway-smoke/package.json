@@ -1,0 +1,22 @@
+{
+  "name": "ai-gateway-smoke",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "typecheck": "tsc --noEmit",
+    "check:health": "tsx src/checks/health.ts",
+    "check:status": "tsx src/checks/status.ts",
+    "check:responses": "tsx src/checks/responses.ts",
+    "check:responses:stream": "tsx src/checks/responses-stream.ts",
+    "check:errors": "tsx src/checks/errors.ts",
+    "check:all": "tsx src/checks/all.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
