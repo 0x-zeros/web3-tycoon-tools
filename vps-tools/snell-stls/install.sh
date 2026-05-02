@@ -45,13 +45,20 @@ set -euo pipefail
 
 # ---- 步骤 0: 守卫 root + Ubuntu 24.04 ----
 # 这两个守卫必须放在最前。脚本会写 /etc 和 systemd，没 root 不可能成功；
-# 跨发行版的 apt-get/lsb_release/服务管理都不一样，不在第一版兼容范围内。
+# 跨发行版的 apt-get/服务管理都不一样，不在第一版兼容范围内。
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "请使用 root 运行：sudo bash $(basename "$0")"
   exit 1
 fi
-if [[ "$(lsb_release -rs 2>/dev/null || true)" != "24.04" ]]; then
-  echo "本脚本仅支持 Ubuntu 24.04。当前系统：$(lsb_release -ds 2>/dev/null || echo '未知')"
+
+if [[ ! -r /etc/os-release ]]; then
+  echo "无法读取 /etc/os-release，本脚本仅支持 Ubuntu 24.04"
+  exit 1
+fi
+# shellcheck disable=SC1091
+. /etc/os-release
+if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
+  echo "本脚本仅支持 Ubuntu 24.04。当前系统：${PRETTY_NAME:-未知}"
   exit 1
 fi
 
@@ -66,6 +73,44 @@ SNELL_VER="${SNELL_VER:-}"
 # 兜底版本号：Surge KB 页面结构变化时使用
 SNELL_FALLBACK_VER="v5.0.1"
 
+# ---- 步骤 1.5: 校验参数格式 ----
+validate_port() {
+  local name="$1"
+  local value="$2"
+  if [[ ! "$value" =~ ^[0-9]+$ ]]; then
+    echo "❌ ${name} 必须是 1-65535 的整数，当前值：${value}"
+    exit 1
+  fi
+  local n=$((10#$value))
+  if (( n < 1 || n > 65535 )); then
+    echo "❌ ${name} 必须是 1-65535 的整数，当前值：${value}"
+    exit 1
+  fi
+}
+
+validate_hostname() {
+  local name="$1"
+  local value="$2"
+  if [[ ${#value} -gt 253 || ! "$value" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$ ]]; then
+    echo "❌ ${name} 必须是合法主机名，当前值：${value}"
+    exit 1
+  fi
+}
+
+validate_snell_version() {
+  local value="$1"
+  if [[ -n "$value" && ! "$value" =~ ^v?5(\.[0-9]+){2}([-+._A-Za-z0-9]+)?$ ]]; then
+    echo "❌ SNELL_VER 格式不合法：${value}"
+    exit 1
+  fi
+}
+
+validate_port "STLS_PORT" "$STLS_PORT"
+validate_port "TLS_TARGET_PORT" "$TLS_TARGET_PORT"
+validate_port "BACKEND_PORT" "$BACKEND_PORT"
+validate_hostname "TLS_DOMAIN" "$TLS_DOMAIN"
+validate_snell_version "$SNELL_VER"
+
 # ---- 工具函数 ----
 # rand_token: 生成 URL-safe 强随机串
 #   - 48 字节熵 ≈ 384-bit，远超实际安全边界
@@ -78,10 +123,18 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || { echo "缺少命令：$1"; exit 1; }
 }
 
+ensure_ss_available() {
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "检测到缺少 ss，正在安装 iproute2..."
+    apt-get update -y >/dev/null
+    apt-get install -y iproute2 >/dev/null
+  fi
+}
+
 # check_port: 检查 TCP 端口未被占用
 #   - ss 输出格式为 "LISTEN ... :PORT ..."，用 \b 边界避免 8443 误命中 84430
 check_port() {
-  if ss -tuln 2>/dev/null | grep -qE ":${1}\b"; then
+  if ss -H -ltn 2>/dev/null | grep -qE ":${1}\b"; then
     echo "端口 $1 已被占用，请更换端口或停止占用该端口的进程"
     exit 1
   fi
@@ -103,20 +156,22 @@ detect_public_ip() {
 }
 
 # ---- 步骤 2: 端口占用检查 ----
+ensure_ss_available
 check_port "$STLS_PORT"
 check_port "$BACKEND_PORT"
 
 # ---- 步骤 3: 安装依赖 ----
 # file 用来识别 ShadowTLS 下载产物的格式（zip / tar.gz / 裸 ELF），不能省
-echo "【1/7】安装依赖（curl/jq/unzip/openssl/file）..."
+echo "【1/7】安装依赖（curl/jq/unzip/openssl/file/tar/iproute2）..."
 apt-get update -y >/dev/null
-apt-get install -y curl jq unzip openssl ca-certificates file >/dev/null
+apt-get install -y curl jq unzip openssl ca-certificates file tar iproute2 >/dev/null
 
 need_cmd curl
 need_cmd jq
 need_cmd unzip
 need_cmd openssl
 need_cmd file
+need_cmd tar
 need_cmd ss
 
 # ---- 步骤 4: 识别 CPU 架构 ----
@@ -156,9 +211,11 @@ if [[ -z "$SNELL_VER" ]]; then
     echo "自动识别到 Snell 版本：${SNELL_VER}"
   fi
 else
+  SNELL_VER="v${SNELL_VER#v}"
   echo "使用用户指定的 Snell 版本：${SNELL_VER}"
 fi
 
+validate_snell_version "$SNELL_VER"
 SNELL_URL="https://dl.nssurge.com/snell/snell-server-${SNELL_VER}-linux-${SNELL_ARCH}.zip"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
@@ -246,20 +303,19 @@ chown snell:snell /etc/snell /etc/snell/snell.conf
 chmod 700 /etc/snell
 chmod 600 /etc/snell/snell.conf
 
-# ShadowTLS 用 EnvironmentFile 注入密码，避免出现在 ExecStart 命令行
-# 之所以 root:snell + 640：root 拥有但 snell 组可读，systemd 启动前用 root 解析 env，
-# 服务降权到 snell 后仍需读这个文件加载环境（实际 EnvironmentFile 是 systemd 在启动前读，
-# 服务进程不再读，所以 snell 组可读其实非必须；这里给 640 是为了允许人工排查时
-# snell 用户也能 cat 看到）
+# ShadowTLS 用 EnvironmentFile 存密码，避免明文写进 unit 文件。
+# 注意：当前 shadow-tls CLI 仍要求通过 --password 传入密码，运行时 root 可从进程 argv 中看到；
+# 这属于上游 CLI 限制。若后续上游支持 password-file/config，应优先改为文件读取。
+# EnvironmentFile 由 systemd 启动前读取，服务进程不需要读取该文件。
 cat > /etc/shadowtls/shadowtls.env <<EOF
 LISTEN=0.0.0.0:${STLS_PORT}
 SERVER=127.0.0.1:${BACKEND_PORT}
 TLS=${TLS_DOMAIN}:${TLS_TARGET_PORT}
 PASSWORD=${STLS_PWD}
 EOF
-chown root:snell /etc/shadowtls /etc/shadowtls/shadowtls.env
+chown root:root /etc/shadowtls /etc/shadowtls/shadowtls.env
 chmod 750 /etc/shadowtls
-chmod 640 /etc/shadowtls/shadowtls.env
+chmod 600 /etc/shadowtls/shadowtls.env
 
 # Snell systemd unit
 # - User/Group=snell 让进程以 snell 跑而非 root
@@ -289,7 +345,7 @@ WantedBy=multi-user.target
 EOF
 
 # ShadowTLS systemd unit
-# - EnvironmentFile 让密码不进 ExecStart（避免 ps -ef 看到）
+# - EnvironmentFile 避免把密码明文写进 unit 文件；但 --password 仍会进入 shadow-tls 进程 argv
 # - AmbientCapabilities=CAP_NET_BIND_SERVICE 即使默认 8443 不需要也保留，
 #   方便用户随手把 STLS_PORT 改成 443/80 不用再改 unit
 # - ProtectSystem=strict 不需要 ReadWritePaths，因为 ShadowTLS 不写文件
@@ -367,7 +423,7 @@ echo "服务状态："
 systemctl --no-pager --full status snell.service shadowtls.service | head -n 30 || true
 echo
 echo "📌 防火墙：请确保安全组/系统防火墙放行 TCP/${STLS_PORT}"
-echo "📌 凭据保存位置：/etc/snell/snell.conf  /etc/shadowtls/shadowtls.env （权限 600/640）"
+echo "📌 凭据保存位置：/etc/snell/snell.conf  /etc/shadowtls/shadowtls.env （权限 600/600）"
 echo
 echo "⚠️  ShadowTLS v3 在 2025-06 之后已被 Aparecium 工具识别（ServerFinished 长度差指纹）。"
 echo "   强审查环境建议升级到 AnyTLS：见 ../anytls/ 同名 install.sh"

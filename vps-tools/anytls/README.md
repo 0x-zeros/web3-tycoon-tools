@@ -21,7 +21,7 @@
 
 ```bash
 # 1) 下载到 VPS
-curl -fsSL -o install.sh https://raw.githubusercontent.com/<你的仓库>/main/vps-tools/anytls/install.sh
+curl -fsSL -o install.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/install.sh
 
 # 2) 运行
 sudo bash install.sh
@@ -49,12 +49,14 @@ sing-box 会自己向 Let's Encrypt 申请证书并自动续期；客户端**不
 | `DOMAIN` | 空 | 提供则启用 ACME 真实证书 |
 | `EMAIL` | 空 | ACME 注册邮箱（DOMAIN 提供时必填） |
 | `SINGBOX_VER` | 自动 | 自动从 GitHub release latest 抓 |
+| `ALLOW_ACME_NON_443` | `0` | ACME + 非 443 时必须设为 `1` 才允许继续（不推荐） |
 
 示例：
 ```bash
 sudo SNI=www.microsoft.com bash install.sh
 sudo LISTEN_PORT=8443 bash install.sh                          # 不推荐改高，443 更隐蔽
 sudo DOMAIN=my.example.com EMAIL=me@x.com bash install.sh      # ACME 模式
+sudo DOMAIN=my.example.com EMAIL=me@x.com LISTEN_PORT=8443 ALLOW_ACME_NON_443=1 bash install.sh  # 仅确认签发链路可用时
 ```
 
 ## 卸载

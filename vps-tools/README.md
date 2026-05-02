@@ -8,7 +8,6 @@
 | --- | --- | --- |
 | [`snell-stls/`](./snell-stls/README.md) | Snell v5 + ShadowTLS v3 一键部署/卸载 | Ubuntu 24.04 VPS |
 | [`anytls/`](./anytls/README.md) | AnyTLS（sing-box）一键部署/卸载 | Ubuntu 24.04 VPS |
-| [`wg/`](./wg/) | WireGuard 安装 / 卸载 / 客户端密钥清理（旧版脚本归档） | Ubuntu VPS |
 
 ## 目录组织
 

@@ -13,7 +13,7 @@
 
 ```bash
 # 1) 下载到 VPS
-curl -fsSL -o install.sh https://raw.githubusercontent.com/<你的仓库>/main/vps-tools/snell-stls/install.sh
+curl -fsSL -o install.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/snell-stls/install.sh
 
 # 2) 运行（必须 sudo bash 而不是 ./，因为 curl 下载下来的脚本没有 +x）
 sudo bash install.sh
@@ -50,7 +50,9 @@ sudo bash uninstall.sh
 ## 凭据存储位置
 
 - `/etc/snell/snell.conf` — Snell PSK（`snell:snell` 600）
-- `/etc/shadowtls/shadowtls.env` — ShadowTLS 密码 + 端口（`root:snell` 640）
+- `/etc/shadowtls/shadowtls.env` — ShadowTLS 密码 + 端口（`root:root` 600；systemd 启动前读取）
+
+> 注意：当前 `shadow-tls` CLI 仍通过 `--password` 接收密码，因此 root 仍可从进程 argv/服务状态中看到该值；`EnvironmentFile` 的作用是避免明文写入 unit 文件，而不是隐藏运行时 argv。
 
 ## ⚠️ 安全提示
 

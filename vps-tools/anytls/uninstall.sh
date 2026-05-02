@@ -20,9 +20,20 @@
 
 set -euo pipefail
 
-# ---- 步骤 0: 守卫 root ----
+# ---- 步骤 0: 守卫 root + Ubuntu 24.04 ----
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "请使用 root 运行：sudo bash $(basename "$0")"
+  exit 1
+fi
+
+if [[ ! -r /etc/os-release ]]; then
+  echo "无法读取 /etc/os-release，本脚本仅支持 Ubuntu 24.04"
+  exit 1
+fi
+# shellcheck disable=SC1091
+. /etc/os-release
+if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
+  echo "本脚本仅支持 Ubuntu 24.04。当前系统：${PRETTY_NAME:-未知}"
   exit 1
 fi
 
@@ -40,6 +51,7 @@ echo "【2/5】禁用并删除 systemd unit..."
 systemctl disable sing-box.service 2>/dev/null || true
 rm -f /etc/systemd/system/sing-box.service
 systemctl daemon-reload
+systemctl reset-failed sing-box.service 2>/dev/null || true
 
 # ---- 步骤 3: 删配置目录 ----
 # 一次性删干净 config + 自签证书 + ACME 缓存（acme/）

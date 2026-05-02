@@ -23,7 +23,8 @@
 - 平台守卫（`lsb_release -rs` 校验，不匹配退出）
 - 端口占用检查（`ss -tuln`）
 - 服务用专用系统用户跑，不要 root（`useradd --system --no-create-home --shell /usr/sbin/nologin --user-group <name>`）
-- 敏感串（密码、token）不要出现在 systemd `ExecStart` 命令行（用 `EnvironmentFile`）
+- 敏感串（密码、token）不要明文写进 systemd unit；优先用配置文件/`EnvironmentFile`，并避免进入进程 argv
+- 若上游 CLI 只能通过命令行参数接收密码，必须在 README 和脚本注释里明示 argv 风险，并优先跟进 password-file/config 替代
 - 装完用 `systemctl is-active` + `ss -tlnp` 双重校验
 - 卸载脚本必须把 systemd unit、`/etc` 目录、`/usr/local/bin` 二进制、系统用户**全部**清干净
 

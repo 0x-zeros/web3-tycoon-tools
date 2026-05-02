@@ -20,9 +20,20 @@
 
 set -euo pipefail
 
-# ---- 步骤 0: 守卫 root ----
+# ---- 步骤 0: 守卫 root + Ubuntu 24.04 ----
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "请使用 root 运行：sudo bash $(basename "$0")"
+  exit 1
+fi
+
+if [[ ! -r /etc/os-release ]]; then
+  echo "无法读取 /etc/os-release，本脚本仅支持 Ubuntu 24.04"
+  exit 1
+fi
+# shellcheck disable=SC1091
+. /etc/os-release
+if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
+  echo "本脚本仅支持 Ubuntu 24.04。当前系统：${PRETTY_NAME:-未知}"
   exit 1
 fi
 
@@ -34,8 +45,8 @@ echo
 # ---- 步骤 1: 停服务 ----
 # stop 容错：服务未跑/不存在不应让脚本失败
 echo "【1/5】停止服务..."
-systemctl stop snell.service 2>/dev/null || echo "  snell.service 未运行或不存在"
 systemctl stop shadowtls.service 2>/dev/null || echo "  shadowtls.service 未运行或不存在"
+systemctl stop snell.service 2>/dev/null || echo "  snell.service 未运行或不存在"
 
 # ---- 步骤 2: 禁用 + 删 unit 文件 ----
 echo "【2/5】禁用并删除 systemd unit..."
@@ -44,6 +55,7 @@ systemctl disable shadowtls.service 2>/dev/null || true
 rm -f /etc/systemd/system/snell.service
 rm -f /etc/systemd/system/shadowtls.service
 systemctl daemon-reload
+systemctl reset-failed snell.service shadowtls.service 2>/dev/null || true
 
 # ---- 步骤 3: 删配置目录 ----
 echo "【3/5】删除配置目录..."

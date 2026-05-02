@@ -32,6 +32,7 @@
 #   DOMAIN            默认 空                   提供则启用 ACME 真实证书；不提供走自签
 #   EMAIL             默认 空                   ACME 注册邮箱（DOMAIN 提供时必填）
 #   SINGBOX_VER       默认 自动从 GitHub release latest 抓
+#   ALLOW_ACME_NON_443 默认 0                   ACME + 非 443 时设为 1 才允许继续
 #
 # 输出
 #   终端打印：服务器（IP 或 DOMAIN）、端口、密码、SNI、完整 Surge 配置行。
@@ -52,8 +53,15 @@ if [[ "$(id -u)" -ne 0 ]]; then
   echo "请使用 root 运行：sudo bash $(basename "$0")"
   exit 1
 fi
-if [[ "$(lsb_release -rs 2>/dev/null || true)" != "24.04" ]]; then
-  echo "本脚本仅支持 Ubuntu 24.04。当前系统：$(lsb_release -ds 2>/dev/null || echo '未知')"
+
+if [[ ! -r /etc/os-release ]]; then
+  echo "无法读取 /etc/os-release，本脚本仅支持 Ubuntu 24.04"
+  exit 1
+fi
+# shellcheck disable=SC1091
+. /etc/os-release
+if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
+  echo "本脚本仅支持 Ubuntu 24.04。当前系统：${PRETTY_NAME:-未知}"
   exit 1
 fi
 
@@ -63,6 +71,61 @@ SNI="${SNI:-www.cloudflare.com}"
 DOMAIN="${DOMAIN:-}"
 EMAIL="${EMAIL:-}"
 SINGBOX_VER="${SINGBOX_VER:-}"
+ALLOW_ACME_NON_443="${ALLOW_ACME_NON_443:-0}"
+
+# ---- 步骤 1.5: 校验参数格式 ----
+validate_port() {
+  local name="$1"
+  local value="$2"
+  if [[ ! "$value" =~ ^[0-9]+$ ]]; then
+    echo "❌ ${name} 必须是 1-65535 的整数，当前值：${value}"
+    exit 1
+  fi
+  local n=$((10#$value))
+  if (( n < 1 || n > 65535 )); then
+    echo "❌ ${name} 必须是 1-65535 的整数，当前值：${value}"
+    exit 1
+  fi
+}
+
+validate_hostname() {
+  local name="$1"
+  local value="$2"
+  if [[ ${#value} -gt 253 || ! "$value" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$ ]]; then
+    echo "❌ ${name} 必须是合法主机名，当前值：${value}"
+    exit 1
+  fi
+}
+
+validate_email() {
+  local value="$1"
+  if [[ ! "$value" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+    echo "❌ EMAIL 格式不合法：${value}"
+    exit 1
+  fi
+}
+
+validate_singbox_version() {
+  local value="$1"
+  if [[ -n "$value" && ! "$value" =~ ^v?[0-9]+(\.[0-9]+){1,3}([-+._A-Za-z0-9]+)?$ ]]; then
+    echo "❌ SINGBOX_VER 格式不合法：${value}"
+    exit 1
+  fi
+}
+
+validate_port "LISTEN_PORT" "$LISTEN_PORT"
+validate_hostname "SNI" "$SNI"
+validate_singbox_version "$SINGBOX_VER"
+if [[ -n "$DOMAIN" ]]; then
+  validate_hostname "DOMAIN" "$DOMAIN"
+fi
+if [[ -n "$EMAIL" ]]; then
+  validate_email "$EMAIL"
+fi
+if [[ "$ALLOW_ACME_NON_443" != "0" && "$ALLOW_ACME_NON_443" != "1" ]]; then
+  echo "❌ ALLOW_ACME_NON_443 只能是 0 或 1，当前值：${ALLOW_ACME_NON_443}"
+  exit 1
+fi
 
 # ACME 模式必须有 EMAIL
 if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
@@ -71,11 +134,12 @@ if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
   exit 1
 fi
 
-# ACME 模式 + 非 443：http-01 校验会失败
-if [[ -n "$DOMAIN" && "$LISTEN_PORT" != "443" ]]; then
-  echo "⚠️  你启用了 ACME 但 LISTEN_PORT=${LISTEN_PORT}（非 443）"
-  echo "   sing-box 内置 ACME 默认走 http-01 校验，要求 80 或 443 端口可达"
-  read -p "   按回车继续，Ctrl+C 终止: " -r _ack
+# ACME 模式 + 非 443：大多数证书签发流程要求标准端口可达。
+# 非交互环境里不使用 read 提示，避免 CI/远程批处理卡住或意外退出。
+if [[ -n "$DOMAIN" && "$LISTEN_PORT" != "443" && "$ALLOW_ACME_NON_443" != "1" ]]; then
+  echo "❌ 启用了 ACME 但 LISTEN_PORT=${LISTEN_PORT}（非 443）"
+  echo "   请改用 LISTEN_PORT=443，或确认签发链路可用后显式设置 ALLOW_ACME_NON_443=1"
+  exit 1
 fi
 
 # ---- 工具函数 ----
@@ -88,8 +152,16 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || { echo "缺少命令：$1"; exit 1; }
 }
 
+ensure_ss_available() {
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "检测到缺少 ss，正在安装 iproute2..."
+    apt-get update -y >/dev/null
+    apt-get install -y iproute2 >/dev/null
+  fi
+}
+
 check_port() {
-  if ss -tuln 2>/dev/null | grep -qE ":${1}\b"; then
+  if ss -H -ltn 2>/dev/null | grep -qE ":${1}\b"; then
     echo "端口 $1 已被占用，请更换端口或停止占用该端口的进程"
     exit 1
   fi
@@ -108,12 +180,13 @@ detect_public_ip() {
 }
 
 # ---- 步骤 2: 端口占用检查 ----
+ensure_ss_available
 check_port "$LISTEN_PORT"
 
 # ---- 步骤 3: 安装依赖 ----
-echo "【1/7】安装依赖（curl/jq/openssl/tar）..."
+echo "【1/7】安装依赖（curl/jq/openssl/tar/iproute2）..."
 apt-get update -y >/dev/null
-apt-get install -y curl jq openssl ca-certificates tar >/dev/null
+apt-get install -y curl jq openssl ca-certificates tar iproute2 >/dev/null
 
 need_cmd curl
 need_cmd jq
