@@ -17,10 +17,25 @@
 - **防火墙**：放行 TCP/`LISTEN_PORT`（默认 443）
 - **客户端**：Surge iOS 5.17.0+ 或 Mac 6.4.3+
 
+## 端到端部署流程
+
+完整一遍走下来大概 3 分钟（不含 VPS 创建时间）：
+
+1. **买 / 准备一台 Ubuntu 24.04 VPS**（任意厂商：Vultr / Linode / AWS Lightsail / 阿里云国际 等）
+2. **在云厂商面板放行 TCP/443**（默认端口；改了 `LISTEN_PORT` 就放行那个）—— 这一步**经常被遗漏**，导致脚本装完但客户端连不上
+3. **SSH 登上 VPS**：`ssh root@<你的VPS_IP>`（或 `ssh ubuntu@<IP>` 视厂商默认账户而定，需要 sudo 权限）
+4. **跑 install.sh**（见下方 Quickstart）
+5. **从终端输出复制配置 / 扫码导入**到客户端（Shadowrocket / Clash Verge Rev / Surge）
+6. **想再看配置**：随时 `sudo bash print-qr.sh`
+
+> 📌 整个流程**只在 VPS 上执行**，本地什么都不用装。
+
 ## Quickstart（自签证书，最简）
 
+**前置：你已 SSH 登在 VPS 上，且是 root 或有 sudo 权限。**
+
 ```bash
-# 1) 下载到 VPS
+# 1) 下载脚本到 VPS
 curl -fsSL -o install.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/install.sh
 
 # 2) 运行
@@ -28,6 +43,7 @@ sudo bash install.sh
 
 # 3) 复制终端输出的 "AnyTLS = ..." 到 Surge
 #    Surge 客户端必须勾选 skip-cert-verify=true（脚本输出已自动带上）
+#    其它客户端（Shadowrocket / Clash Verge Rev / v2rayN）扫终端打出的二维码即可
 ```
 
 ## Quickstart（真实域名 + ACME 证书，更干净）
@@ -35,6 +51,9 @@ sudo bash install.sh
 如果你有域名，且 DNS 已解析到这台 VPS：
 
 ```bash
+# 同样先 SSH 上 VPS，再下载脚本
+curl -fsSL -o install.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/install.sh
+
 sudo DOMAIN=my.example.com EMAIL=me@x.com bash install.sh
 ```
 

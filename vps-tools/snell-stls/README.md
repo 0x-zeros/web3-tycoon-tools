@@ -9,10 +9,25 @@
 - **网络**：能访问 `dl.nssurge.com` 和 `api.github.com`
 - **防火墙**：云厂商安全组 + 系统防火墙都要放行 TCP/`STLS_PORT`（默认 8443）
 
+## 端到端部署流程
+
+⚠️ **先决策**：这套组合**只 Surge 能用**。如果你的客户端是 Shadowrocket / Clash Verge Rev / v2rayN 等，请直接换 [`../anytls/`](../anytls/README.md)，下面的步骤就不用看了。
+
+完整一遍走下来大概 3 分钟（不含 VPS 创建时间）：
+
+1. **买 / 准备一台 Ubuntu 24.04 VPS**
+2. **云厂商面板放行 TCP/8443**（默认；改了 `STLS_PORT` 就放行那个）—— 经常被遗漏
+3. **SSH 登上 VPS**：`ssh root@<你的VPS_IP>`
+4. **跑 install.sh**（见下方 Quickstart）
+5. **从终端复制 "Snell-STLS = ..." 整行**到 Surge 的 `[Proxy]` 段
+6. **想再看配置**：随时 `sudo bash print-qr.sh`
+
 ## Quickstart
 
+**前置：你已 SSH 登在 VPS 上，且是 root 或有 sudo 权限。**
+
 ```bash
-# 1) 下载到 VPS
+# 1) 下载脚本到 VPS
 curl -fsSL -o install.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/snell-stls/install.sh
 
 # 2) 运行（必须 sudo bash 而不是 ./，因为 curl 下载下来的脚本没有 +x）
