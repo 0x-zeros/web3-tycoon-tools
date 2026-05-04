@@ -424,6 +424,8 @@ systemctl --no-pager --full status snell.service shadowtls.service | head -n 30 
 echo
 echo "📌 防火墙：请确保安全组/系统防火墙放行 TCP/${STLS_PORT}"
 echo "📌 凭据保存位置：/etc/snell/snell.conf  /etc/shadowtls/shadowtls.env （权限 600/600）"
+echo "📌 事后再看（这套组合只 Surge 能用，二维码是 Surge 配置行的纯文本）："
+echo "    sudo bash print-qr.sh"
 echo
 echo "⚠️  ShadowTLS v3 在 2025-06 之后已被 Aparecium 工具识别（ServerFinished 长度差指纹）。"
 echo "   强审查环境建议升级到 AnyTLS：见 ../anytls/ 同名 install.sh"

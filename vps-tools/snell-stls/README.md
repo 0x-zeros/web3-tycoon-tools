@@ -39,6 +39,39 @@ sudo STLS_PORT=443 TLS_DOMAIN=www.microsoft.com bash install.sh
 sudo SNELL_VER=v5.0.1 bash install.sh    # 锁定版本
 ```
 
+## 事后再看配置 / 打印二维码
+
+安装时凭据只在终端打印一次。后续想再看：
+
+```bash
+# 默认：打印 Surge 配置行 + 终端 ANSI 二维码（QR 内容是 Surge 配置行的纯文本）
+sudo bash print-qr.sh
+
+# 只要文字，不渲染 QR
+sudo bash print-qr.sh --no-qr
+
+# 把二维码保存成 PNG
+sudo bash print-qr.sh --png /tmp/snell-stls.png
+
+# 管道友好：只打 Surge 行
+sudo bash print-qr.sh --surge-only
+```
+
+> ⚠️ **二维码内容只是 Surge 配置行的纯文本**，不是分享链接。原因：Snell v5 + ShadowTLS v3 是 Surge 独家组合，没有跨客户端 URI 标准（`snell://` / `stls://` 都不存在）。
+>
+> 用相机扫码 → 得到一段文字 → 复制粘贴到 Surge 的 `[Proxy]` 段。
+
+### 客户端兼容（2026-05 时点）
+
+| 客户端 | 平台 | 是否能用 |
+| --- | --- | --- |
+| **Surge** 6.4.3+ | iOS / macOS | ✅ 唯一原生支持 |
+| Shadowrocket 2.2.x | iOS | ❌ Snell 仅支持 v1-3，本服务跑的是 v5 |
+| v2rayN 7.x | Windows | ❌ 完全不支持 Snell |
+| Clash Verge Rev / Mihomo Party / Karing | 多平台 | ❌ mihomo 内核 Snell 仅到 v3 |
+
+**如果你需要 iPhone+Windows 双平台**，请改用同项目 [`../anytls/`](../anytls/README.md) — AnyTLS 在 Shadowrocket / Clash Verge Rev / v2rayN 都有原生 URI 解析支持，能真正"扫码即导入"。
+
 ## 卸载
 
 ```bash

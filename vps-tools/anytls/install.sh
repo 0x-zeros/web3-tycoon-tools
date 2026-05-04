@@ -470,6 +470,8 @@ systemctl --no-pager --full status sing-box.service | head -n 30 || true
 echo
 echo "📌 防火墙：请确保安全组/系统防火墙放行 TCP/${LISTEN_PORT}"
 echo "📌 凭据保存位置：/etc/sing-box/config.json （权限 640）"
+echo "📌 事后再看 / 打印二维码（扫码导入到 Shadowrocket / Clash Verge Rev 等）："
+echo "    sudo bash print-qr.sh"
 if [[ -z "$DOMAIN" ]]; then
   echo
   echo "ℹ️  当前为自签证书模式，Surge 客户端必须勾选 skip-cert-verify"

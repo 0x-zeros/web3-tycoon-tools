@@ -59,6 +59,84 @@ sudo DOMAIN=my.example.com EMAIL=me@x.com bash install.sh      # ACME 模式
 sudo DOMAIN=my.example.com EMAIL=me@x.com LISTEN_PORT=8443 ALLOW_ACME_NON_443=1 bash install.sh  # 仅确认签发链路可用时
 ```
 
+## 事后再看配置 / 打印二维码
+
+安装时凭据只在终端打印一次。后续想再看（或想用二维码扫码导入到客户端）：
+
+```bash
+# 默认：打印 anytls:// URI + Surge 配置行 + 终端 ANSI 二维码
+sudo bash print-qr.sh
+
+# 只要文字，不渲染 QR
+sudo bash print-qr.sh --no-qr
+
+# 同时把二维码保存成 PNG（方便发到其它设备）
+sudo bash print-qr.sh --png /tmp/anytls.png
+
+# 管道友好：只打 anytls:// URL 或只打 Surge 行
+sudo bash print-qr.sh --uri-only
+sudo bash print-qr.sh --surge-only
+```
+
+二维码内容是标准的 [`anytls://` URI](https://github.com/anytls/anytls-go/blob/main/docs/uri_scheme.md)，**用手机扫即可导入**。
+
+### 客户端选型（2026-05 时点）
+
+#### 各平台一句话推荐
+
+| 平台 | 首选 | 导入方式 |
+| --- | --- | --- |
+| **iOS** | Shadowrocket 2.2.x | 扫 QR / 粘贴 `anytls://` URI |
+| **macOS** | Surge 6.4.3+ | 粘贴上面的 "Surge 配置行"（Surge 不解析 `anytls://`） |
+| **Windows** | **Clash Verge Rev** v2.4.5+ | 扫 QR / 粘贴 `anytls://` URI |
+| **Linux** | Clash Verge Rev / sing-box-windows | 扫 QR / 粘贴 `anytls://` URI |
+| **Android** | NekoBox / sing-box for Android (SFA) | 扫 QR |
+
+> ⚠️ **Surge 不支持 `anytls://` URI**——只能粘贴 Surge 配置行。其它客户端都能扫码。
+
+#### Windows 三选一详细对比
+
+如果你跟我一样还会同时用 **TUIC+TLS** 和 **VLESS+Reality**，下面是这三个 Windows 客户端的完整对比：
+
+| 维度 | **Clash Verge Rev** v2.4.7 | **sing-box-windows** v2.3.0 | **v2rayN** 7.21+ |
+| --- | --- | --- | --- |
+| 内核 | mihomo (Clash.Meta) | sing-box（纯） | Xray + sing-box（**双内核**） |
+| AnyTLS | ✅ + URI 解析（v2.4.5+） | ✅ + URI 解析（紧贴上游） | ✅ + URI 解析（强制走 sing-box） |
+| TUIC v5 + TLS | ✅ mihomo 原生 | ✅ sing-box 原生 | ✅ sing-box only（自动切内核） |
+| VLESS + Reality | ✅ + `vless://` URI | ✅ + `vless://` URI | ✅（Xray 或 sing-box 都行） |
+| TUN 模式 | ✅ 开箱 | ✅ | ✅ |
+| 系统托盘/自启 | ✅ | ✅ | ✅ |
+| UI 现代度 | ⭐⭐⭐⭐⭐ Tauri 2 | ⭐⭐⭐⭐ Tauri 2 + Vue 3 | ⭐⭐ WPF 老派 |
+| 多内核切换 | ❌ mihomo only | ❌ sing-box only | ✅ 唯一双内核 |
+| GitHub 热度 | 116k★，月度发布 | 持续维护 | 持续维护 |
+| 协议跟进 | mihomo 跟上游 sing-box（中速） | 紧贴 sing-box 上游（最快） | 取决于内核 |
+
+**结论**：
+
+- **首选 Clash Verge Rev** — 三协议全覆盖 + URI 直接导入 + UI 最好 + 生态最大。日常用就它。
+- **次选 sing-box-windows** — AnyTLS / TUIC v5 是 sing-box 独家协议，它跟得最快。如果哪天 mihomo 跟进上游慢（比如 AnyTLS padding 调优），换它。
+- **兜底 v2rayN** — 唯一双内核，VLESS+Reality 想用 Xray "原生家"实现的话只此一家。但 UI 最老派。
+
+**一句话：日常 Clash Verge Rev，备一份 sing-box-windows 应急。**
+
+#### 各客户端导入操作
+
+**📱 Shadowrocket (iOS)**
+- 首页右上角 ➕ → "扫描二维码" → 对准 QR
+
+**💻 Clash Verge Rev (Windows/Mac/Linux, v2.4.5+)**
+- 主界面 → 代理 → 节点编辑 → 粘贴 `anytls://` URI
+- 或：扫码工具识别 QR 后复制 URI 到节点编辑框
+
+**💻 sing-box-windows (Windows/Mac/Linux)**
+- 订阅页 → "节点链接 / YAML" 模式 → 粘贴 `anytls://` URI
+
+**💻 v2rayN (Windows, 7.14.6+)**
+- 复制 `anytls://` URI 到剪贴板 → 服务器菜单 → "从剪贴板导入批量URL"
+
+**🍎 Surge (macOS / iOS)**
+- 不解析 `anytls://` URI；把 Surge 配置行整行粘到 `[Proxy]` 段下
+
 ## 卸载
 
 ```bash
