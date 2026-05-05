@@ -56,20 +56,19 @@ sudo SNELL_VER=v5.0.1 bash install.sh    # 锁定版本
 
 ## 事后再看配置 / 打印二维码
 
-安装时凭据只在终端打印一次。后续想再看：
+安装时凭据只在终端打印一次。后续想再看，SSH 上 VPS 跑：
 
 ```bash
-# 默认：打印 Surge 配置行 + 终端 ANSI 二维码（QR 内容是 Surge 配置行的纯文本）
+# 1) 下载 print-qr.sh（与 install.sh 是独立文件，第一次跑要先下载）
+curl -fsSL -o print-qr.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/snell-stls/print-qr.sh
+
+# 2) 跑（默认：打印 Surge 配置行 + 终端 ANSI 二维码；QR 内容是 Surge 配置行的纯文本）
 sudo bash print-qr.sh
 
-# 只要文字，不渲染 QR
-sudo bash print-qr.sh --no-qr
-
-# 把二维码保存成 PNG
-sudo bash print-qr.sh --png /tmp/snell-stls.png
-
-# 管道友好：只打 Surge 行
-sudo bash print-qr.sh --surge-only
+# 其它用法
+sudo bash print-qr.sh --no-qr                       # 只要文字，不渲染 QR
+sudo bash print-qr.sh --png /tmp/snell-stls.png     # 把二维码保存成 PNG
+sudo bash print-qr.sh --surge-only                  # 只打 Surge 行（管道友好）
 ```
 
 > ⚠️ **二维码内容只是 Surge 配置行的纯文本**，不是分享链接。原因：Snell v5 + ShadowTLS v3 是 Surge 独家组合，没有跨客户端 URI 标准（`snell://` / `stls://` 都不存在）。

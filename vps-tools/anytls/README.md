@@ -80,21 +80,20 @@ sudo DOMAIN=my.example.com EMAIL=me@x.com LISTEN_PORT=8443 ALLOW_ACME_NON_443=1 
 
 ## 事后再看配置 / 打印二维码
 
-安装时凭据只在终端打印一次。后续想再看（或想用二维码扫码导入到客户端）：
+安装时凭据只在终端打印一次。后续想再看（或想用二维码扫码导入到客户端），SSH 上 VPS 跑：
 
 ```bash
-# 默认：打印 anytls:// URI + Surge 配置行 + 终端 ANSI 二维码
+# 1) 下载 print-qr.sh（与 install.sh 是独立文件，第一次跑要先下载）
+curl -fsSL -o print-qr.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/print-qr.sh
+
+# 2) 跑（默认：打印 anytls:// URI + Surge 配置行 + 终端 ANSI 二维码）
 sudo bash print-qr.sh
 
-# 只要文字，不渲染 QR
-sudo bash print-qr.sh --no-qr
-
-# 同时把二维码保存成 PNG（方便发到其它设备）
-sudo bash print-qr.sh --png /tmp/anytls.png
-
-# 管道友好：只打 anytls:// URL 或只打 Surge 行
-sudo bash print-qr.sh --uri-only
-sudo bash print-qr.sh --surge-only
+# 其它用法
+sudo bash print-qr.sh --no-qr                  # 只要文字，不渲染 QR
+sudo bash print-qr.sh --png /tmp/anytls.png    # 同时把二维码保存成 PNG
+sudo bash print-qr.sh --uri-only               # 只打 anytls:// URL（管道友好）
+sudo bash print-qr.sh --surge-only             # 只打 Surge 行
 ```
 
 二维码内容是标准的 [`anytls://` URI](https://github.com/anytls/anytls-go/blob/main/docs/uri_scheme.md)，**用手机扫即可导入**。
