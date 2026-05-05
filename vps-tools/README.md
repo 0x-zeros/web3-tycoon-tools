@@ -66,12 +66,61 @@ vps-tools/
 
 #### 真要降 VPS 被黑概率，做这些（跟 GitHub 无关）
 
-按攻击概率排：
+防御 VPS 被黑分两条路线，**二选一**即可，不必同时上：
 
-1. 🔴 SSH **禁用密码登录**，只允许 key（`PasswordAuthentication no` in `/etc/ssh/sshd_config`）
-2. 🔴 SSH **禁用 root 直接登录**（`PermitRootLogin no`），用 sudo 用户
-3. 🔴 SSH 端口换非 22（不是真安全，但能挡掉 99% 的扫描 bot 噪音）
-4. 🟠 装 `fail2ban`，自动 ban 暴力破解 IP
-5. 🟠 防火墙 `ufw` 只放需要的端口（443 + 22，其余 default deny）
-6. 🟠 跟着上游升级 sing-box / shadow-tls（脚本默认抓 latest）
-7. 🟡 `mihomo` / `sing-box` 的 RESTful API 默认只听 `127.0.0.1`，**不要手贱改成 `0.0.0.0`**
+##### 路线 A：云厂商 Security Group + 源 IP 白名单（推荐 ⭐）
+
+适合：你已经在 AWS / Linode / Vultr / Lightsail 控制台管 VPS。
+
+```
+入站规则（Inbound）：
+  - 22 (SSH)        : 源 = 你常用 IP（家/公司）        ← 关键，主动准入
+  - 443 (AnyTLS)    : 源 = 0.0.0.0/0                   ← 必须开，客户端来自任意 IP
+  - 8443 (Snell-STLS, 如装): 源 = 0.0.0.0/0
+  - 其余           : 默认 deny
+
+出站规则（Outbound）：默认全开（VPS 是代理，需访问任意目标）
+```
+
+为什么这条路线更优：
+
+- 过滤发生在 **hypervisor / SDN 层**，包到不了 VPS，不耗 VPS 资源
+- VPS 即使被 root，攻击者也改不了 SG 规则（要登你云厂商账号）——比 ufw 抗破坏
+- UI 防止常见误配置（不会一条规则把 SSH 给自己锁外）
+- SSH 源 IP 变（出差/换网络）→ 登云控制台改 SG → 强制经过"账号控制"环节
+- **零维护**，没有 fail2ban 那些日志解析、ban 表管理的活
+
+##### 路线 B：主机内 ufw + fail2ban（在 VPS 里做）
+
+适合：你不能限 SSH 源 IP（团队共用、客户演示、四处出差且懒得每次改 SG），或者用的 VPS 厂商防火墙难用。
+
+```bash
+# 主机层
+sudo apt install ufw fail2ban
+sudo ufw default deny incoming
+sudo ufw allow 22/tcp     # 或换非 22 减少扫描噪音
+sudo ufw allow 443/tcp
+sudo ufw enable
+# fail2ban 自动 ban 暴力破解 SSH 的 IP
+sudo systemctl enable --now fail2ban
+```
+
+##### 两条路线都要做的（无论 A/B）
+
+1. 🔴 SSH **禁用密码登录**，只允许 key：`/etc/ssh/sshd_config` 设 `PasswordAuthentication no`
+2. 🔴 SSH **禁用 root 直登**：`PermitRootLogin no`，平时用 sudo 用户
+3. 🟠 跟着上游升级 sing-box / shadow-tls（脚本默认抓 latest，重装即升）
+
+##### 关于代理端口（443 / 8443）的安全
+
+这俩**必须** `0.0.0.0/0`，因为客户端来自任意 IP。云 SG / ufw / fail2ban 在这里**都无能为力**。代理端口的安全完全靠**密码熵**：
+
+- AnyTLS / ShadowTLS 密码 = `openssl rand -base64 48` = **384 bit 熵**
+- 暴力破解尝试次数约 10⁹⁹ —— 宇宙热寂前破不完
+
+所以代理端口的安全靠**密码学**，不靠 IP 过滤。
+
+##### 关于 RESTful API / external-controller 的迷思
+
+- **你这台 VPS（服务端）**：脚本生成的 sing-box `config.json` **完全没有** `experimental.clash_api` / `experimental.v2ray_api` 块，所以根本不存在 RESTful 控制接口可暴露。安全无忧。
+- **你 Windows 上的客户端（GUI 内核）**：mihomo / sing-box 客户端默认 `external-controller: 127.0.0.1:9090`，是给本机 GUI 用的，**别改成 `0.0.0.0`**——那是给 GUI 的命令通道，对外开就等于把内核控制权交出去。
