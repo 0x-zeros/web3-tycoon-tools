@@ -1,2 +1,39 @@
 ref4AI/
 .env
+.env.*
+!.env.example
+
+# 代理软件部署后的真实配置（绝不能 commit）
+# 这些都是脚本在 VPS 上运行时生成的，不应该出现在仓库里
+config.json
+*.conf
+*.env.local
+shadowtls.env
+snell.conf
+
+# 凭据 / 密钥 / 证书
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+known_hosts
+
+# 二维码 / 截图（容易把密码露出来）
+*.qr.png
+qr-*.png
+qr-*.svg
+proxy-*.png
+
+# 系统/工具临时
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+*~
+.vscode/
+.idea/

@@ -45,3 +45,33 @@ vps-tools/
 - 文档、注释、commit 一律中文
 - 部署/卸载类脚本必须有：root 守卫、平台守卫、参数注释、卸载脚本
 - 部署脚本默认绝不在本地执行，只在目标环境验证
+
+## 安全：什么能 commit，什么绝不能
+
+本仓库是 **GitHub public repo**。脚本本身公开**没有任何安全风险**——所有凭据是脚本在 VPS 运行时用 `openssl rand` 当场生成的，仓库里只有逻辑，没有秘密。Kerckhoffs 原则：好的安全只依赖密钥，不依赖隐藏代码。
+
+但**未来 commit 是终生可见的**（即便事后删除，GitHub 缓存和 crawler 会留底）。绝不能进仓库的东西：
+
+| ❌ 绝不 commit | 原因 |
+| --- | --- |
+| `/etc/sing-box/config.json` 真实部署后的副本 | 含明文 AnyTLS 密码 |
+| `/etc/snell/snell.conf` / `/etc/shadowtls/shadowtls.env` | 含 PSK 和 ShadowTLS 密码 |
+| 任何包含真实 VPS IP 的脚本/截图/笔记 | 让攻击者锁定靶子 |
+| `*.pem` / `*.key` / `id_rsa*` / `id_ed25519*` | SSH/TLS 私钥 |
+| `print-qr.sh --png` 输出的 PNG/SVG | 二维码包含完整凭据 |
+| `.env` / 任何 `*.env.local` | 通常含 token/API key |
+| 云厂商 API key（AWS/Vultr/Linode） | 直接接管账户 |
+
+仓库根 `.gitignore` 已经预过滤了上面这些常见模式。但永远不要 `git add .`——总是显式 add 你检视过的文件。
+
+#### 真要降 VPS 被黑概率，做这些（跟 GitHub 无关）
+
+按攻击概率排：
+
+1. 🔴 SSH **禁用密码登录**，只允许 key（`PasswordAuthentication no` in `/etc/ssh/sshd_config`）
+2. 🔴 SSH **禁用 root 直接登录**（`PermitRootLogin no`），用 sudo 用户
+3. 🔴 SSH 端口换非 22（不是真安全，但能挡掉 99% 的扫描 bot 噪音）
+4. 🟠 装 `fail2ban`，自动 ban 暴力破解 IP
+5. 🟠 防火墙 `ufw` 只放需要的端口（443 + 22，其余 default deny）
+6. 🟠 跟着上游升级 sing-box / shadow-tls（脚本默认抓 latest）
+7. 🟡 `mihomo` / `sing-box` 的 RESTful API 默认只听 `127.0.0.1`，**不要手贱改成 `0.0.0.0`**
