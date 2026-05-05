@@ -218,14 +218,6 @@ sudo bash print-qr.sh --surge-only             # 只打 Surge 行
 **🍎 Surge (macOS / iOS)**
 - 不解析 `anytls://` URI；把 Surge 配置行整行粘到 `[Proxy]` 段下
 
-## 卸载
-
-```bash
-sudo bash uninstall.sh
-```
-
-清理：systemd 服务、`/etc/sing-box`（含自签证书和 ACME 缓存）、`/usr/local/bin/sing-box`、系统用户 `sing-box`。
-
 ## 自签 vs ACME 怎么选
 
 | | 自签（默认） | ACME |
@@ -266,3 +258,55 @@ sudo cat /etc/sing-box/config.json
 - AnyTLS 配置含密码，文件权限默认 `640`，只有 `sing-box` 用户和 root 能读
 - 自签证书模式下，客户端 `skip-cert-verify=true` 意味着不校验服务端证书——**正常使用没问题**，但如果你的设备有人能控制网络且想中间人攻击你的 AnyTLS 流量，理论上能伪造服务端。个人场景下可接受
 - ACME 模式下 sing-box 会在 `/etc/sing-box/acme/` 缓存账号和证书，请勿手动删除
+
+## 服务管理 / 停止 / 卸载
+
+服务名：`sing-box.service`。所有命令在 VPS 上以 sudo 跑。
+
+### 临时停止 / 启动 / 重启（保留安装，随时再开）
+
+```bash
+sudo systemctl stop sing-box        # 停服务（连接立即断；配置/凭据/二进制都保留）
+sudo systemctl start sing-box       # 启动
+sudo systemctl restart sing-box     # 重启（改了配置后用）
+sudo systemctl status sing-box      # 看当前状态（active / inactive / failed）
+```
+
+### 禁用 / 启用开机自启
+
+```bash
+sudo systemctl disable sing-box         # 禁用自启：VPS 重启后服务不会自动起
+sudo systemctl enable  sing-box         # 重新启用自启
+sudo systemctl disable --now sing-box   # 一步：停止 + 禁用自启
+sudo systemctl enable  --now sing-box   # 一步：启用自启 + 立即启动
+```
+
+### 完全卸载
+
+`uninstall.sh` 跟 `install.sh` 是独立文件，第一次卸载要先下载：
+
+```bash
+# 1) 下载 uninstall.sh
+curl -fsSL -o uninstall.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/uninstall.sh
+
+# 2) 跑（幂等：未装过的环境跑也安全）
+sudo bash uninstall.sh
+```
+
+**会清理**：
+
+- systemd 服务（`sing-box.service`）
+- 配置目录 `/etc/sing-box`（含自签证书 + ACME 缓存 `/etc/sing-box/acme/`）
+- 二进制 `/usr/local/bin/sing-box`
+- 系统用户 `sing-box`
+
+**不会动**：你的云厂商 Security Group / 防火墙规则（端口要不要关请自己去 AWS/Linode 控制台改）。
+
+### 临时停止 vs 卸载怎么选
+
+| 场景 | 选哪个 |
+| --- | --- |
+| 不用一阵子，过几天还要用 | `systemctl stop` |
+| VPS 用作其它用途，不再需要代理 | `uninstall.sh` |
+| 改默认端口 / 切自签↔ACME | `uninstall.sh` 后用新参数重装 install.sh |
+| 改密码 | `uninstall.sh` 后重装（密码每次随机生成） |
