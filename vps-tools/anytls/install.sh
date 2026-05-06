@@ -470,7 +470,7 @@ systemctl --no-pager --full status sing-box.service | head -n 30 || true
 echo
 echo "📌 防火墙：请确保安全组/系统防火墙放行 TCP/${LISTEN_PORT}"
 echo "📌 凭据保存位置：/etc/sing-box/config.json （权限 640）"
-echo "📌 事后再看 / 打印二维码（扫码导入到 Shadowrocket / Clash Verge Rev 等）："
+echo "📌 事后再看 / 打印二维码（扫码导入到 Shadowrocket / v2rayN / NekoBox）："
 echo "    curl -fsSL -o print-qr.sh https://raw.githubusercontent.com/0x-zeros/web3-tycoon-tools/main/vps-tools/anytls/print-qr.sh"
 echo "    sudo bash print-qr.sh"
 if [[ -z "$DOMAIN" ]]; then

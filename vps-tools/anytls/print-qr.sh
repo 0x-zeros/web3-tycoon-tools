@@ -30,11 +30,11 @@
 #   https://github.com/anytls/anytls-go/blob/main/docs/uri_scheme.md
 #   anytls://password@host:port/?sni=X[&insecure=1]
 #
-# 兼容客户端（2026-05 时点）
-#   📱 iOS    : Shadowrocket（直接扫码）
-#   💻 Windows: Clash Verge Rev v2.4.5+、v2rayN 7.14.6+、sing-box-windows
-#   🐧 Linux  : Clash Verge Rev、sing-box-windows
-#   🍎 macOS  : Surge（用 Surge 配置行；Surge 不解析 anytls:// URI）
+# 兼容客户端
+#   📱 iOS         : Shadowrocket（直接扫码）
+#   💻 Windows/Linux: v2rayN 7.14.6+
+#   🤖 Android     : NekoBox for Android
+#   🍎 macOS / iOS : Surge（用 Surge 配置行；Surge 不解析 anytls:// URI）
 # ============================================================
 
 set -euo pipefail
@@ -204,7 +204,7 @@ EOF
 if [[ "$RENDER_QR" -eq 1 ]]; then
   cat <<'EOF'
 ========== 二维码（手机相机扫码即可导入）==========
-适用：📱 Shadowrocket(iOS)  💻 Clash Verge Rev / v2rayN / sing-box-windows
+适用：📱 Shadowrocket(iOS)  💻 v2rayN(Win/Linux)  🤖 NekoBox(Android)
 不适用：Surge（不解析 anytls:// URI，请用上面的"Surge 配置行"）
 
 EOF
@@ -233,14 +233,11 @@ if [[ "$RENDER_QR" -eq 1 ]]; then
 📱 Shadowrocket (iOS)
    首页右上角 ➕ → 选 "扫描二维码" → 对准上方 QR
 
-💻 Clash Verge Rev (Windows/Mac/Linux, v2.4.5+)
-   配置 → 新建 → 节点编辑 → 粘贴 anytls:// 链接（或扫码功能）
+💻 v2rayN (Windows/Linux, 7.14.6+)
+   服务器 → 从剪贴板导入批量URL（先复制上方 anytls:// 链接）
 
-💻 v2rayN (Windows, 7.14.6+)
-   服务器 → 从剪贴板导入批量URL（先 Ctrl+C 复制上方 anytls:// 链接）
-
-💻 sing-box-windows (Windows/Mac/Linux)
-   订阅页 → 节点链接/YAML 模式 → 粘贴 anytls:// 链接
+🤖 NekoBox for Android
+   配置 → ➕ → 扫描二维码
 
 🍎 Surge (macOS / iOS)
    不支持 anytls:// URI；把上面的 "Surge 配置行" 整行粘到 [Proxy] 段下

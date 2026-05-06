@@ -11,15 +11,12 @@
 #     - 终端 ANSI 二维码（内容是上面那行 Surge 配置的"纯文本"）
 #   首次安装时这些信息已在 install.sh 末尾打过；此脚本是"事后再看"用的。
 #
-# ⚠️ 重要：Snell v5 + ShadowTLS v3 是 Surge 独家组合（2026-05 时点）
-#   - Shadowrocket 只支持 Snell v1-3，无法用本服务的 Snell v5
-#   - v2rayN 完全不支持 Snell
-#   - Clash Verge Rev / Mihomo Party / Karing 的 mihomo 内核也只到 Snell v3
+# ⚠️ 重要：Snell v5 + ShadowTLS v3 是 Surge 独家组合
 #   - 跨客户端 URI 标准（snell:// / stls://）不存在
+#   - 其它客户端（Shadowrocket / v2rayN / NekoBox 等）都用不了
 #   因此本脚本生成的二维码 **只是把 Surge 配置行编码成 QR 文字**——
 #   手机相机扫出来是一段纯文本，需要复制粘贴到 Surge 的 [Proxy] 段。
-#   想要"真正能扫码导入"的方案，请改用同项目 ../anytls/，AnyTLS 在 iOS/Win
-#   都有原生 URI 解析支持。
+#   想要"真正能扫码导入"的方案，请改用同项目 ../anytls/。
 #
 # 前置条件
 #   - 已运行过同目录 install.sh（存在 /etc/snell/snell.conf 和
@@ -213,11 +210,7 @@ if [[ "$RENDER_QR" -eq 1 ]]; then
 ✅ Surge (iOS / macOS) — 唯一原生支持 Snell v5 + ShadowTLS v3
    把 Surge 配置行整行粘到 [Proxy] 段下
 
-❌ Shadowrocket (iOS) — Snell 仅支持 v1-3，本服务跑的是 v5
-❌ v2rayN (Windows)    — 完全不支持 Snell
-❌ Clash Verge Rev / Mihomo Party / Karing — mihomo 内核 Snell 仅到 v3
-
-如果你有 iPhone+Windows 双平台需求，建议改用 AnyTLS：
-   sudo bash ../anytls/install.sh
+❌ 其它任何客户端（Shadowrocket / v2rayN / NekoBox 等）—— 用不了
+   想跨平台请改用 AnyTLS（同项目 ../anytls/）
 EOF
 fi
