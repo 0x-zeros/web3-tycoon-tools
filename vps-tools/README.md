@@ -21,8 +21,8 @@
 
 每个工具的 README 里都有详细 Quickstart。统一流程：
 
-1. **买 / 准备一台 Ubuntu 24.04 VPS**（Vultr / Linode / Lightsail / 阿里云国际 任意厂商）
-2. **云厂商面板放行端口**（AnyTLS 默认 TCP/443；Snell-STLS 默认 TCP/8443）
+1. **买 / 准备一台 Ubuntu 24.04 VPS**（Linode / Lightsail ，面板可配置端口，源地址网段。linode不要使用22默认ssh端口，容易被攻击，根本连不上，在能连上的时候，第一件事就是换ssh端口。aws的lightsail，要注意网络超额费用非常贵）
+2. **云厂商面板放行端口**（AnyTLS 默认 TCP/443；Snell-STLS 默认 TCP/8443）。（为了安全性，尽量添加上源地址网段，把常用的的WiFi的网段以及5G/4G手机的移动网段等都加上去，以后出现连不上的情况下，这边也要检测一下是不是本地的网段变了。变了的话，再加上去。这两个服务器的网页访问并不需要通过VPN就能访问）
 3. **SSH 登 VPS**：`ssh root@<你的VPS_IP>`
 4. **跑安装脚本**：`curl -fsSL -o install.sh <脚本URL> && sudo bash install.sh`
 5. **从终端复制配置**到客户端（或扫终端二维码）
